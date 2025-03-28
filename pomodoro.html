@@ -519,7 +519,7 @@
             const [focusTime, setFocusTime] = React.useState(25);
             const [breakTime, setBreakTime] = React.useState(5);
             const [sets, setSets] = React.useState(4);
-            const [currentSet, setCurrentSet] = React.useState(1);
+            const [currentSet, setCurrentSet] = React.useState(0);
             const [mode, setMode] = React.useState('focus');
             const [timeLeft, setTimeLeft] = React.useState(focusTime * 60);
             const [totalTime, setTotalTime] = React.useState(focusTime * 60);
@@ -601,8 +601,8 @@
                 }
             };
             
-            // 200ms마다 피커 값을 확인
-            const intervalId = setInterval(checkPickerValues, 200);
+            // 300ms마다 피커 값을 확인
+            const intervalId = setInterval(checkPickerValues, 300);
             
             return () => clearInterval(intervalId);
             }, [focusTime, breakTime, mode, isRunning, setTimeLeft, setTotalTime, drawTimer]);
@@ -1064,16 +1064,6 @@
                                     setTimeLeft(focusTime * 60);
                                     setTotalTime(focusTime * 60);
                                     setAllSetsCompleted(true); // 모든 세트 완료 표시
-                                    
-                                    // 모든 세트 완료 알림
-                                    if (soundEnabled) {
-                                        if (focusAudioRef.current) {
-                                            focusAudioRef.current.play();
-                                            setTimeout(() => {
-                                                if (focusAudioRef.current) focusAudioRef.current.play();
-                                            }, 500);
-                                        }
-                                    }
                                 }
                             }
                         }
@@ -1148,6 +1138,7 @@
                                             id="focus-time-picker"
                                             className="picker-values" 
                                             ref={focusPickerRef}
+                                            onTouchStart={(e) => e.stopPropagation()}
                                         >
                                             {renderPickerItems(60, focusTime, (value) => {
                                                 if (!isRunning) {
@@ -1171,6 +1162,7 @@
                                             id="break-time-picker"
                                             className="picker-values" 
                                             ref={breakPickerRef}
+                                            onTouchStart={(e) => e.stopPropagation()}
                                         >
                                             {renderPickerItems(60, breakTime, (value) => {
                                                 if (!isRunning) {
@@ -1418,11 +1410,10 @@
                                 </div>
                             )}
                             
-                            <div 
-                                className="set-display"
-                                aria-live="polite"
-                                aria-atomic="true"
-                            >
+                            <div
+                            className="set-display"
+                            aria-live="polite"
+                            aria-atomic="true">
                                 {currentSet}/{sets} 세트 - {mode === 'focus' ? '집중' : '휴식'}
                             </div>
                         </div>
