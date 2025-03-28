@@ -368,16 +368,10 @@
         .picker-values {
             height: 100%;
             box-sizing: border-box;
-            overflow-y: scroll;
+            overflow-y: auto;
             scroll-snap-type: y mandatory;
             padding: 40px 0;
             -webkit-overflow-scrolling: touch;
-            scrollbar-width: none;
-            -ms-overflow-style: none;
-            touch-action: pan-y;
-            will-change: scroll-position;
-            user-select: none;
-            -webkit-user-select: none;
         }
         
         .picker-values::-webkit-scrollbar {
@@ -390,7 +384,6 @@
             align-items: center;
             justify-content: center;
             scroll-snap-align: center;
-            scroll-snap-stop: always;
             cursor: pointer;
             transition: color 0.3s;
             color: rgba(var(--text-color-rgb), 0.6);
@@ -573,6 +566,73 @@
                 // 모드 변경 시 타이머 다시 그리기
                 drawTimer();
             }, [mode, drawTimer]);
+
+            // 피커에 적용할 관성 스크롤 로직 추가
+            React.useEffect(() => {
+            const applyMomentumScrolling = (element) => {
+                if (!element) return;
+                
+                let startY = 0;
+                let startTime = 0;
+                let velocityY = 0;
+                let isMouseDown = false;
+                
+                const handleTouchStart = (e) => {
+                startY = e.touches[0].clientY;
+                startTime = Date.now();
+                isMouseDown = true;
+                velocityY = 0;
+                };
+                
+                const handleTouchMove = (e) => {
+                if (!isMouseDown) return;
+                const currentY = e.touches[0].clientY;
+                const currentTime = Date.now();
+                const deltaTime = currentTime - startTime;
+                
+                if (deltaTime > 0) {
+                    velocityY = (currentY - startY) / deltaTime;
+                }
+                
+                startY = currentY;
+                startTime = currentTime;
+                };
+                
+                const handleTouchEnd = () => {
+                if (!isMouseDown) return;
+                isMouseDown = false;
+                
+                const momentumScroll = () => {
+                    if (Math.abs(velocityY) < 0.1) return;
+                    
+                    velocityY *= 0.95; // 감속 계수
+                    element.scrollTop -= velocityY * 10;
+                    
+                    requestAnimationFrame(momentumScroll);
+                };
+                
+                requestAnimationFrame(momentumScroll);
+                };
+                
+                element.addEventListener('touchstart', handleTouchStart);
+                element.addEventListener('touchmove', handleTouchMove);
+                element.addEventListener('touchend', handleTouchEnd);
+                
+                return () => {
+                element.removeEventListener('touchstart', handleTouchStart);
+                element.removeEventListener('touchmove', handleTouchMove);
+                element.removeEventListener('touchend', handleTouchEnd);
+                };
+            };
+            
+            if (focusPickerRef.current) {
+                applyMomentumScrolling(focusPickerRef.current);
+            }
+            
+            if (breakPickerRef.current) {
+                applyMomentumScrolling(breakPickerRef.current);
+            }
+            }, [focusPickerRef, breakPickerRef]);
             
             // 시간 포맷팅 함수
             const formatTime = (seconds) => {
