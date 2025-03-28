@@ -602,8 +602,8 @@
                 }
             };
             
-            // 300ms마다 피커 값을 확인
-            const intervalId = setInterval(checkPickerValues, 300);
+            // 200ms마다 피커 값을 확인
+            const intervalId = setInterval(checkPickerValues, 200);
             
             return () => clearInterval(intervalId);
             }, [focusTime, breakTime, mode, isRunning, setTimeLeft, setTotalTime, drawTimer]);
