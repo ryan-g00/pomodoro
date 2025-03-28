@@ -567,72 +567,46 @@
                 drawTimer();
             }, [mode, drawTimer]);
 
-            // 피커에 적용할 관성 스크롤 로직 추가
+            // 피커 값을 주기적으로 확인하는 useEffect 추가
             React.useEffect(() => {
-            const applyMomentumScrolling = (element) => {
-                if (!element) return;
+            const checkPickerValues = () => {
+                if (focusPickerRef.current && !isRunning) {
+                const scrollTop = focusPickerRef.current.scrollTop;
+                const itemHeight = 40;
+                const index = Math.round(scrollTop / itemHeight);
                 
-                let startY = 0;
-                let startTime = 0;
-                let velocityY = 0;
-                let isMouseDown = false;
-                
-                const handleTouchStart = (e) => {
-                startY = e.touches[0].clientY;
-                startTime = Date.now();
-                isMouseDown = true;
-                velocityY = 0;
-                };
-                
-                const handleTouchMove = (e) => {
-                if (!isMouseDown) return;
-                const currentY = e.touches[0].clientY;
-                const currentTime = Date.now();
-                const deltaTime = currentTime - startTime;
-                
-                if (deltaTime > 0) {
-                    velocityY = (currentY - startY) / deltaTime;
+                if (focusTime !== index) {
+                    setFocusTime(index);
+                    if (mode === 'focus') {
+                    setTimeLeft(index * 60);
+                    setTotalTime(index * 60);
+                    drawTimer();
+                    }
+                }
                 }
                 
-                startY = currentY;
-                startTime = currentTime;
-                };
+                if (breakPickerRef.current && !isRunning) {
+                const scrollTop = breakPickerRef.current.scrollTop;
+                const itemHeight = 40;
+                const index = Math.round(scrollTop / itemHeight);
                 
-                const handleTouchEnd = () => {
-                if (!isMouseDown) return;
-                isMouseDown = false;
-                
-                const momentumScroll = () => {
-                    if (Math.abs(velocityY) < 0.1) return;
-                    
-                    velocityY *= 0.95; // 감속 계수
-                    element.scrollTop -= velocityY * 10;
-                    
-                    requestAnimationFrame(momentumScroll);
-                };
-                
-                requestAnimationFrame(momentumScroll);
-                };
-                
-                element.addEventListener('touchstart', handleTouchStart);
-                element.addEventListener('touchmove', handleTouchMove);
-                element.addEventListener('touchend', handleTouchEnd);
-                
-                return () => {
-                element.removeEventListener('touchstart', handleTouchStart);
-                element.removeEventListener('touchmove', handleTouchMove);
-                element.removeEventListener('touchend', handleTouchEnd);
-                };
+                if (breakTime !== index) {
+                    setBreakTime(index);
+                    if (mode === 'break') {
+                    setTimeLeft(index * 60);
+                    setTotalTime(index * 60);
+                    drawTimer();
+                    }
+                }
+                }
             };
             
-            if (focusPickerRef.current) {
-                applyMomentumScrolling(focusPickerRef.current);
-            }
+            // 200ms마다 피커 값을 확인
+            const intervalId = setInterval(checkPickerValues, 200);
             
-            if (breakPickerRef.current) {
-                applyMomentumScrolling(breakPickerRef.current);
-            }
-            }, [focusPickerRef, breakPickerRef]);
+            return () => clearInterval(intervalId);
+            }, [focusTime, breakTime, mode, isRunning, setTimeLeft, setTotalTime, drawTimer]);
+            
             
             // 시간 포맷팅 함수
             const formatTime = (seconds) => {
@@ -892,7 +866,7 @@
                 }
                 return items;
             };
-            
+            /*
             // 휠 피커 스크롤 이벤트 처리
             const handlePickerScroll = (ref, setValue) => {
                 if (!ref.current) return;
@@ -919,7 +893,7 @@
                     
                     drawTimer();
                 }, 100); // 스크롤이 멈추고 100ms 후에 값을 읽음
-            };
+            }; */
             
             // 오디오 요소 생성
             React.useEffect(() => {
@@ -1174,7 +1148,6 @@
                                             id="focus-time-picker"
                                             className="picker-values" 
                                             ref={focusPickerRef}
-                                            onScroll={() => handlePickerScroll(focusPickerRef, setFocusTime)}
                                         >
                                             {renderPickerItems(60, focusTime, (value) => {
                                                 if (!isRunning) {
@@ -1198,7 +1171,6 @@
                                             id="break-time-picker"
                                             className="picker-values" 
                                             ref={breakPickerRef}
-                                            onScroll={() => handlePickerScroll(breakPickerRef, setBreakTime)}
                                         >
                                             {renderPickerItems(60, breakTime, (value) => {
                                                 if (!isRunning) {
