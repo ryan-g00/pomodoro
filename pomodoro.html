@@ -702,7 +702,6 @@
                 const handleTouchStart = (e) => {
                     if (isRunning) return;
                     
-                    e.preventDefault(); // 스크롤 방지
                     const rect = canvas.getBoundingClientRect();
                     const touch = e.touches[0];
                     const x = touch.clientX - rect.left;
@@ -715,14 +714,13 @@
                 const handleTouchMove = (e) => {
                     if (!isDragging || isRunning) return;
                     
-                    e.preventDefault(); // 스크롤 방지
                     const rect = canvas.getBoundingClientRect();
                     const touch = e.touches[0];
                     const x = touch.clientX - rect.left;
                     const y = touch.clientY - rect.top;
                     
                     updatePreviewFromCoords(x, y);
-                };
+                }
 
                 const handleTouchEnd = () => {
                     if (!isDragging || isRunning) return;
@@ -770,8 +768,8 @@
                 canvas.addEventListener('mouseup', handleMouseUp);
                 canvas.addEventListener('mouseleave', handleMouseUp);
                 // 터치 이벤트 리스너
-                canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
-                canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+                canvas.addEventListener('touchstart', handleTouchStart);
+                canvas.addEventListener('touchmove', handleTouchMove);
                 canvas.addEventListener('touchend', handleTouchEnd);
                 canvas.addEventListener('touchcancel', handleTouchEnd);
                 
@@ -781,10 +779,10 @@
                     canvas.removeEventListener('mouseup', handleMouseUp);
                     canvas.removeEventListener('mouseleave', handleMouseUp);
 
-                    canvas.addEventListener('touchstart', handleTouchStart);
-                    canvas.addEventListener('touchmove', handleTouchMove);
-                    canvas.addEventListener('touchend', handleTouchEnd);
-                    canvas.addEventListener('touchcancel', handleTouchEnd);
+                    canvas.removeEventListener('touchstart', handleTouchStart);
+                    canvas.removeEventListener('touchmove', handleTouchMove);
+                    canvas.removeEventListener('touchend', handleTouchEnd);
+                    canvas.removeEventListener('touchcancel', handleTouchEnd);
                 };
             }, [isRunning, isPaused, mode, setFocusTime, setBreakTime, setTimeLeft, setTotalTime]); // 의존성 배열 수정
             
