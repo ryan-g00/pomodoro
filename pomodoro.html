@@ -371,6 +371,7 @@
             overflow-y: auto;
             scroll-snap-type: y mandatory;
             padding: 40px 0;
+            -webkit-overflow-scrolling: touch;
         }
         
         .picker-values::-webkit-scrollbar {
@@ -981,6 +982,13 @@
                             
                             // 모드 전환
                             if (mode === 'focus') {
+
+                                if (currentSet < sets) {
+                                    setCurrentSet(prev => prev + 1);
+                                } else {
+                                    setAllSetsCompleted(true); // 모든 세트 완료 표시
+                                }
+
                                 setMode('break');
                                 setTimeLeft(breakTime * 60);
                                 setTotalTime(breakTime * 60);
@@ -995,7 +1003,6 @@
                                 // 휴식 모드가 끝난 후
                                 if (currentSet < sets) {
                                     // 아직 세트가 남아있으면
-                                    setCurrentSet(prev => prev + 1);
                                     setMode('focus');
                                     setTimeLeft(focusTime * 60);
                                     setTotalTime(focusTime * 60);
