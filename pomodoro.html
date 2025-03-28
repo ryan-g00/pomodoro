@@ -1,0 +1,1368 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>굴러라굴러정해량</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/17.0.2/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/17.0.2/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/6.26.0/babel.min.js"></script>
+
+    <link rel="icon" href="A_digital_vector_graphic_displays_a_minimalist,_fl.png" type="image/png">
+    <link rel="apple-touch-icon" href="A_digital_vector_graphic_displays_a_minimalist,_fl.png">
+    <link rel="manifest" href="manifest.json">
+
+    <style>
+        :root {
+            --bg-color: #121212;
+            --surface-color: #1e1e1e;
+            --text-color: #ffffff;
+            --text-color-rgb: 255, 255, 255;
+            --primary-color: #ff4d4d;
+            --secondary-color: #4caf50;
+            --accent-color: #2196f3;
+            --border-color: #333;
+            --input-bg-color: #2a2a2a;
+            --input-bg-hover: #3a3a3a;
+            --highlight-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            transition: background-color 0.5s, color 0.5s;
+        }
+        
+        body.light-theme {
+            --bg-color: #f5f5f7;
+            --surface-color: #ffffff;
+            --text-color: #1d1d1f;
+            --text-color-rgb: 29, 29, 31;
+            --border-color: #d1d1d6;
+            --input-bg-color: #e5e5e5;
+            --input-bg-hover: #d5d5d5;
+            --highlight-color: rgba(0, 0, 0, 0.05);
+        }
+        
+        /* 휴식 모드일 때 적용할 스타일 - 색상 반전 */
+        body.break-mode {
+            transition: background-color 0.5s, color 0.5s;
+        }
+        
+        body.dark-theme.break-mode {
+            background-color: #f5f5f7;
+            color: #1d1d1f;
+        }
+        
+        body.light-theme.break-mode {
+            background-color: #121212;
+            color: #ffffff;
+        }
+        
+        /* 휴식 모드일 때 UI 요소 색상 반전 */
+        body.break-mode .timer-time,
+        body.break-mode .set-display,
+        body.break-mode .timer-button {
+            color: inherit; /* body의 color 값 상속 */
+        }
+        
+        .app-container {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1; /* 필요에 따라 z-index 설정 */
+        }
+        
+        .timer-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+        .timer-display {
+            position: relative;
+            width: 95vmin;
+            height: 95vmin;
+            max-width: 700px;
+            max-height: 700px;
+            margin: 0 auto;
+        }
+        
+        .timer-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .timer-time {
+            position: fixed;
+            bottom: 70px;
+            left: 30px;
+            font-size: 45px;
+            font-weight: 600;
+            color: var(--text-color);
+            z-index: 10;
+            transition: color 0.3s;
+        }
+        
+        .time-preview {
+            position: fixed; 
+            bottom: 70px;
+            left: 30px;
+            font-size: 45px;
+            font-weight: 600;
+            color: var(--text-color);
+            background-color: transparent;
+            padding: 0;
+            border-radius: 0;
+            display: none;
+            pointer-events: none;
+            z-index: 11;
+            transition: color 0.3s;
+        }
+        
+        .set-display {
+            position: fixed;
+            bottom: 40px;
+            left: 30px;
+            font-size: 25px;
+            font-weight: 500;
+            color: var(--text-color);
+            transition: color 0.3s;
+        }
+        
+        /* 휴식 모드일 때 텍스트 색상 반전 */
+        body.dark-theme.break-mode .timer-time,
+        body.dark-theme.break-mode .time-preview,
+        body.dark-theme.break-mode .set-display {
+            color: #1d1d1f;
+        }
+        
+        body.light-theme.break-mode .timer-time,
+        body.light-theme.break-mode .time-preview,
+        body.light-theme.break-mode .set-display {
+            color: #ffffff;
+        }
+
+        /* 세트 설정 스타일 수정 */
+        .sets-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .sets-label {
+            flex: 1;
+        }
+        
+        .sets-counter {
+            display: flex;
+            align-items: center;
+            background-color: var(--input-bg-color);
+            border-radius: 4px;
+            overflow: hidden;
+            transition: background-color 0.3s;
+        }
+        
+        .sets-button {
+            width: 36px;
+            height: 36px;
+            background-color: var(--input-bg-color);
+            border: none;
+            color: var(--text-color);
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .sets-button:hover:not(:disabled) {
+            background-color: var(--input-bg-hover);
+        }
+        
+        .sets-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .sets-value {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: bold;
+            color: var(--text-color);
+            transition: color 0.3s;
+        }
+        
+        .timer-actions {
+            position: fixed;
+            bottom: 40px;
+            right: 30px;
+            display: flex;
+            gap: 15px;
+            z-index: 100;
+        }
+        
+        .timer-button {
+            background: none;
+            color: var(--text-color);
+            border: none;
+            width: 40px;
+            height: 40px;
+            font-size: 30px;
+            cursor: pointer;
+            transition: opacity 0.3s, color 0.3s;
+            opacity: 0.8;
+            padding: 0;
+        }
+        
+        /* 휴식 모드일 때 버튼 색상 반전 */
+        body.dark-theme.break-mode .timer-button {
+            color: #1d1d1f;
+        }
+        
+        body.light-theme.break-mode .timer-button {
+            color: #ffffff;
+        }
+        .timer-button:hover {
+            opacity: 1;
+            color: var(--text-color);
+        }
+        
+        .menu-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: none;
+            border: none;
+            color: var(--text-color);
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 1000;
+            transition: color 0.3s;
+        }
+        
+        /* 휴식 모드일 때 메뉴 버튼 색상 반전 */
+        body.dark-theme.break-mode .menu-button {
+            color: #1d1d1f;
+        }
+        
+        body.light-theme.break-mode .menu-button {
+            color: #ffffff;
+        }
+        
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: -300px;
+            width: 300px;
+            height: 100%;
+            background-color: var(--surface-color);
+            transition: left 0.3s, background-color 0.3s;
+            overflow-y: auto;
+            z-index: 1000;
+            padding: 20px;
+            box-sizing: border-box;
+            color: var(--text-color);
+        }
+        
+        .sidebar.open {
+            left: 0;
+        }
+        
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: none;
+            z-index: 999;
+        }
+        
+        .overlay.active {
+            display: block;
+        }
+        
+        .sidebar-header {
+            font-size: 24px;
+            margin-bottom: 30px;
+            text-align: center;
+            color: var(--text-color);
+            font-weight: bold;
+        }
+        
+        .sidebar-section {
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .sidebar-section:last-child {
+            border-bottom: none;
+        }
+        
+        /* 시간 픽커 스타일 추가 */
+        .time-pickers {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .time-picker {
+            flex: 1;
+        }
+        
+        .time-picker-label {
+            display: block;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .picker-container {
+            position: relative;
+            height: 120px;
+            overflow: hidden;
+            border-radius: 8px;
+            background-color: var(--input-bg-color);
+            transition: background-color 0.3s;
+        }
+        
+        .picker-highlight {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 40px;
+            transform: translateY(-50%);
+            background-color: var(--highlight-color);
+            pointer-events: none;
+            transition: background-color 0.3s;
+        }
+        
+        .picker-values {
+            height: 100%;
+            box-sizing: border-box;
+            overflow-y: auto;
+            scroll-snap-type: y mandatory;
+            padding: 40px 0;
+        }
+        
+        .picker-values::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .picker-item {
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            scroll-snap-align: center;
+            cursor: pointer;
+            transition: color 0.3s;
+            color: rgba(var(--text-color-rgb), 0.6);
+        }
+        
+        .picker-item.selected {
+            color: var(--text-color);
+            font-weight: bold;
+        }
+        
+        /* 모드 선택 버튼 스타일 수정 */
+        .mode-selector {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .mode-button {
+            flex: 1;
+            background-color: var(--input-bg-color);
+            color: var(--text-color);
+            border: none;
+            border-radius: 8px;
+            padding: 10px;
+            cursor: pointer;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .mode-button:hover:not(:disabled) {
+            background-color: var(--input-bg-hover);
+        }
+        
+        .mode-button.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .mode-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .toggle-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .toggle-slider {
+            background-color: var(--primary-color);
+        }
+        
+        input:checked + .toggle-slider:before {
+            transform: translateX(26px);
+        }
+        
+        .color-options {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .color-option {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: border-color 0.3s;
+        }
+        
+        .color-option.selected {
+            border-color: var(--text-color);
+        }
+        
+        .color-option.red {
+            background-color: #ff4d4d;
+        }
+        
+        .color-option.green {
+            background-color: #4caf50;
+        }
+
+        .sidebar-section.disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const App = () => {
+            // 상태 관리
+            const [focusTime, setFocusTime] = React.useState(25);
+            const [breakTime, setBreakTime] = React.useState(5);
+            const [sets, setSets] = React.useState(4);
+            const [currentSet, setCurrentSet] = React.useState(1);
+            const [mode, setMode] = React.useState('focus');
+            const [timeLeft, setTimeLeft] = React.useState(focusTime * 60);
+            const [totalTime, setTotalTime] = React.useState(focusTime * 60);
+            const [isRunning, setIsRunning] = React.useState(false);
+            const [isPaused, setIsPaused] = React.useState(false);
+            const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
+            const [isDarkMode, setIsDarkMode] = React.useState(true);
+            const [timerColor, setTimerColor] = React.useState('red');
+            const [showTicks, setShowTicks] = React.useState(true);
+            const [showNumbers, setShowNumbers] = React.useState(true);
+            const [showTimeDisplay, setShowTimeDisplay] = React.useState(true);
+            const [soundEnabled, setSoundEnabled] = React.useState(true);
+            const [vibrationEnabled, setVibrationEnabled] = React.useState(true);
+            const [autoStart, setAutoStart] = React.useState(false);
+            const [allSetsCompleted, setAllSetsCompleted] = React.useState(false); // 모든 세트 완료 여부
+            
+            // 참조 생성
+            const canvasRef = React.useRef(null);
+            const timePreviewRef = React.useRef(null);
+            const focusAudioRef = React.useRef(null);
+            const breakAudioRef = React.useRef(null);
+            const focusPickerRef = React.useRef(null);
+            const breakPickerRef = React.useRef(null);
+            
+            // 다크 모드 설정
+            React.useEffect(() => {
+                if (isDarkMode) {
+                    document.body.classList.add('dark-theme');
+                    document.body.classList.remove('light-theme');
+                } else {
+                    document.body.classList.add('light-theme');
+                    document.body.classList.remove('dark-theme');
+                }
+            }, [isDarkMode]);
+            
+            // 모드에 따른 배경색 설정
+            React.useEffect(() => {
+                if (mode === 'focus') {
+                    document.body.classList.remove('break-mode');
+                } else {
+                    document.body.classList.add('break-mode');
+                }
+                
+                // 모드 변경 시 타이머 다시 그리기
+                drawTimer();
+            }, [mode, drawTimer]);
+            
+            // 시간 포맷팅 함수
+            const formatTime = (seconds) => {
+                const mins = Math.floor(seconds / 60);
+                const secs = Math.floor(seconds % 60);
+                return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            };
+            
+            // 타이머 그리기 함수
+            const drawTimer = React.useCallback(() => {
+                const canvas = canvasRef.current;
+                if (!canvas) return;
+                
+                const ctx = canvas.getContext('2d');
+                canvas.width = 600;
+                canvas.height = 600;
+                const centerX = canvas.width / 2;
+                const centerY = canvas.height / 2;
+                const radius = 220;
+                
+                // 캔버스 초기화
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // 배경 원 그리기 - 테마에 따라 색상 반전 고려
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+                
+                // 메인 모드일 때는 테마에 따라, 휴식 모드일 때는 반전
+                const isBreakMode = mode === 'break';
+                const shouldUseDarkTheme = (isDarkMode && !isBreakMode) || (!isDarkMode && isBreakMode);
+                
+                ctx.fillStyle = shouldUseDarkTheme ? '#333' : '#e0e0e0';
+                ctx.fill();
+                
+                // 진행 상황에 따른 원형 차트 그리기
+                const startAngle = -0.5 * Math.PI;
+                
+                // 선택한 시간에 따른 각도 계산 (60분 기준)
+                const maxAngle = (totalTime / 3600) * 2 * Math.PI; // 60분(3600초)이 2π
+                const progress = timeLeft / totalTime;
+                const endAngle = startAngle + (progress * maxAngle);
+                
+                if (progress > 0) {
+                    ctx.beginPath();
+                    ctx.moveTo(centerX, centerY);
+                    ctx.arc(centerX, centerY, radius, startAngle, endAngle, false);
+                    ctx.closePath();
+                    ctx.fillStyle = timerColor === 'red' ? '#ff4d4d' : '#4caf50';
+                    ctx.fill();
+                }
+                
+                // 눈금 그리기 (showTicks가 true일 때만) - 반전 처리
+                if (showTicks) {
+                    for (let i = 0; i < 60; i++) {
+                        const angle = (i * 6 - 90) * (Math.PI / 180);
+                        const inner = i % 5 === 0 ? radius + 4 : radius + 8;
+                        const outer = i % 5 === 0 ? radius + 28 : radius + 14;
+                        const x1 = centerX + inner * Math.cos(angle);
+                        const y1 = centerY + inner * Math.sin(angle);
+                        const x2 = centerX + outer * Math.cos(angle);
+                        const y2 = centerY + outer * Math.sin(angle);
+                        
+                        ctx.beginPath();
+                        ctx.strokeStyle = shouldUseDarkTheme ? '#fff' : '#333';
+                        ctx.lineWidth = i % 5 === 0 ? 3 : 1; // 5분 단위는 더 굵게
+                        ctx.moveTo(x1, y1);
+                        ctx.lineTo(x2, y2);
+                        ctx.stroke();
+                    }
+                }
+                
+                // 숫자 그리기 (showNumbers가 true일 때만) - 반전 처리
+                if (showNumbers) {
+                    for (let i = 0; i < 12; i++) {
+                        const text = (i * 5).toString();
+                        const angle = (i * 30 - 90) * (Math.PI / 180);
+                        const tx = centerX + (radius + 50) * Math.cos(angle); // 50px 더 바깥쪽
+                        const ty = centerY + (radius + 50) * Math.sin(angle);
+                        
+                        ctx.fillStyle = shouldUseDarkTheme ? '#fff' : '#333';
+                        ctx.font = "24px sans-serif"; // 고정 크기 사용
+                        ctx.textAlign = "center";
+                        ctx.textBaseline = "middle";
+                        ctx.fillText(text, tx, ty);
+                    }
+                }
+                
+                // 일시정지 상태일 때 "일시정지됨" 텍스트 표시 - 반전 처리
+                if (isPaused) {
+                    ctx.fillStyle = shouldUseDarkTheme ? '#fff' : '#333';
+                    ctx.font = "20px sans-serif";
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.fillText("일시정지됨", centerX, centerY - 40);
+                }
+            }, [timeLeft, totalTime, timerColor, showTicks, showNumbers, isPaused, isDarkMode, mode]);
+            
+            // 드래그로 시간 설정
+            React.useEffect(() => {
+                const canvas = canvasRef.current;
+                const timePreview = timePreviewRef.current;
+                if (!canvas || !timePreview) return;
+                let isDragging = false; // 지역 변수로 변경
+                
+                const handleMouseDown = (e) => {
+                    if (isRunning) return; // 타이머 실행 중이거나 일시정지 상태에서는 설정 불가
+                    
+                    const rect = canvas.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    
+                    isDragging = true;
+                    updatePreviewFromCoords(x, y);
+                };
+                
+                const handleMouseMove = (e) => {
+                    if (!isDragging || isRunning) return;
+                    
+                    const rect = canvas.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    
+                    updatePreviewFromCoords(x, y);
+                };
+                
+                const handleMouseUp = () => {
+                    if (!isDragging || isRunning) return;
+                    
+                    isDragging = false;
+                    timePreview.style.display = 'none';
+                };
+                
+                // 좌표로부터 시간 설정 및 미리보기 업데이트
+                const updatePreviewFromCoords = (x, y) => {
+                    const centerX = canvas.width / 2;
+                    const centerY = canvas.height / 2;
+                    
+                    const dx = x - centerX;
+                    const dy = y - centerY;
+                    let angle = Math.atan2(dy, dx);
+                    
+                    // 각도를 0~2π 범위로 변환
+                    angle = angle < -0.5 * Math.PI ? angle + 2 * Math.PI : angle;
+                    
+                    // 각도를 시간으로 변환 (2π = 60분) - 0분~60분 범위 가능
+                    const percent = (angle + 0.5 * Math.PI) / (2 * Math.PI);
+                    const mins = Math.max(0, Math.min(60, Math.round(percent * 60)));
+                    
+                    // 시간 설정 (초 단위로)
+                    const newTimeInSeconds = mins * 60;
+                    setTimeLeft(newTimeInSeconds);
+                    setTotalTime(newTimeInSeconds);
+                    
+                    // 모드에 따라 설정 시간 업데이트
+                    if (mode === 'focus') {
+                        setFocusTime(mins);
+                    } else {
+                        setBreakTime(mins);
+                    }
+                    
+                    // 미리보기 표시
+                    timePreview.textContent = `${mins.toString().padStart(2, '0')}:00`;
+                    timePreview.style.display = 'block';
+                };
+                
+                // 이벤트 리스너 등록
+                canvas.addEventListener('mousedown', handleMouseDown);
+                canvas.addEventListener('mousemove', handleMouseMove);
+                canvas.addEventListener('mouseup', handleMouseUp);
+                canvas.addEventListener('mouseleave', handleMouseUp);
+                
+                return () => {
+                    canvas.removeEventListener('mousedown', handleMouseDown);
+                    canvas.removeEventListener('mousemove', handleMouseMove);
+                    canvas.removeEventListener('mouseup', handleMouseUp);
+                    canvas.removeEventListener('mouseleave', handleMouseUp);
+                };
+            }, [isRunning, isPaused, mode, setFocusTime, setBreakTime, setTimeLeft, setTotalTime]); // 의존성 배열 수정
+            
+            // 휠 피커 초기화
+            React.useEffect(() => {
+                if (focusPickerRef.current) {
+                const scrollPos = focusTime * 40;
+                focusPickerRef.current.scrollTop = scrollPos;
+                }
+                 if (breakPickerRef.current) {
+                const scrollPos = breakTime * 40;
+                breakPickerRef.current.scrollTop = scrollPos;
+                }
+            }, [focusTime, breakTime]);
+            
+            // 휠 피커 아이템 렌더링
+            const renderPickerItems = (max, value, onChange) => {
+                const items = [];
+                for (let i = 0; i <= max; i++) { // 0부터 max까지 (60 포함)
+                    items.push(
+                        <div 
+                            key={i} 
+                            className={`picker-item ${i === value ? 'selected' : ''}`}
+                            onClick={() => {
+                                if (!isRunning || isPaused) { // 타이머 실행 중이 아니거나 일시정지 상태면 변경 가능
+                                    onChange(i);
+                                    if ((mode === 'focus' && onChange === setFocusTime) || 
+                                        (mode === 'break' && onChange === setBreakTime)) {
+                                        setTimeLeft(i * 60);
+                                        setTotalTime(i * 60);
+                                        drawTimer();
+                                    }
+                                }
+                            }}
+                        >
+                            {i}
+                        </div>
+                    );
+                }
+                return items;
+            };
+            
+            // 휠 피커 스크롤 이벤트 처리
+            const handlePickerScroll = (ref, setValue) => {
+                if (!ref.current) return; // 타이머 실행중 체크 제거
+                
+                const scrollTop = ref.current.scrollTop;
+                const itemHeight = 40;
+                const index = Math.round(scrollTop / itemHeight);
+                
+                // 범위 체크 없이 바로 적용
+                setValue(index);
+                
+                // 모드에 따라 타이머 업데이트 (단순화)
+                if (mode === 'focus' && setValue === setFocusTime) {
+                    setTimeLeft(index * 60);
+                    setTotalTime(index * 60);
+                } else if (mode === 'break' && setValue === setBreakTime) {
+                    setTimeLeft(index * 60);
+                    setTotalTime(index * 60);
+                }
+                
+                drawTimer();
+                
+            };
+            
+            // 오디오 요소 생성
+            React.useEffect(() => {
+                // 알림음
+                const focusAudio = new Audio("https://ryan-g00.github.io/pomodoro/dingdong.mp3");
+                const breakAudio = new Audio("https://ryan-g00.github.io/pomodoro/beep.mp3");
+                
+                focusAudioRef.current = focusAudio;
+                breakAudioRef.current = breakAudio;
+                
+                return () => {
+                    focusAudio.pause();
+                    breakAudio.pause();
+                };
+            }, []);
+            
+            // 타이머 시작
+            const startTimer = () => {
+            // ✅ 사파리용 오디오 재생 권한 확보 (무음 재생)
+            if (focusAudioRef.current && breakAudioRef.current) {
+                try {
+                // focus audio
+                focusAudioRef.current.volume = 0.01;
+                focusAudioRef.current.currentTime = 0;
+                focusAudioRef.current.play()
+                    .then(() => {
+                    focusAudioRef.current.pause();
+                    focusAudioRef.current.currentTime = 0;
+                    focusAudioRef.current.volume = 1; // 원래대로 복구
+                    })
+                    .catch(() => {});
+
+                // break audio
+                breakAudioRef.current.volume = 0.01;
+                breakAudioRef.current.currentTime = 0;
+                breakAudioRef.current.play()
+                    .then(() => {
+                    breakAudioRef.current.pause();
+                    breakAudioRef.current.currentTime = 0;
+                    breakAudioRef.current.volume = 1;
+                    })
+                    .catch(() => {});
+                } catch (err) {
+                console.warn("Audio warm-up failed:", err);
+                }
+            }
+
+            // 타이머 시작
+            if (!isRunning) {
+                setIsRunning(true);
+                setIsPaused(false);
+                setAllSetsCompleted(false); // 세트 완료 상태 초기화
+            }
+            };
+
+
+            // 타이머 시작 직전
+            const handleUserInteraction = () => {
+            // 한 번 재생 후 바로 중단 사파리 소리 재생 문제 해결 위해..
+            if (focusAudioRef.current) {
+                focusAudioRef.current.volume = 0.01;
+                focusAudioRef.current.play().then(() => {
+                focusAudioRef.current.pause();
+                focusAudioRef.current.currentTime = 0;
+                }).catch(() => {});
+            }
+            };
+            
+            // 타이머 일시정지
+            const pauseTimer = () => {
+                if (isRunning) {
+                    setIsRunning(false);
+                    setIsPaused(true);
+                }
+            };
+            
+            // 타이머 리셋
+            const resetTimer = () => {
+                setIsRunning(false);
+                setIsPaused(false);
+                setTimeLeft(mode === 'focus' ? focusTime * 60 : breakTime * 60);
+                setTotalTime(mode === 'focus' ? focusTime * 60 : breakTime * 60);
+                setAllSetsCompleted(false); // 타이머 리셋 시 세트 완료 상태 초기화
+                drawTimer();
+            };
+            
+            // 세트 증가/감소 핸들러
+            const handleDecreaseSets = () => {
+                if (sets > 1 && !isRunning) {
+                    setSets(prev => prev - 1);
+                }
+            };
+            
+            const handleIncreaseSets = () => {
+                if (sets < 10 && !isRunning) {
+                    setSets(prev => prev + 1);
+                }
+            };
+            
+            // 타이머 애니메이션
+            React.useEffect(() => {
+                let intervalId = null;
+                
+                if (isRunning) {
+                    const startTime = Date.now();
+                    const initialTimeLeft = timeLeft;
+                    
+                    intervalId = setInterval(() => {
+                        const elapsedSeconds = (Date.now() - startTime) / 1000;
+                        const newTimeLeft = Math.max(0, initialTimeLeft - elapsedSeconds);
+                        
+                        setTimeLeft(newTimeLeft);
+                        drawTimer();
+                        
+                        if (newTimeLeft <= 0) {
+                            clearInterval(intervalId);
+                            setIsRunning(false);
+                            
+                            // 타이머 종료 시 알림
+                            if (soundEnabled) {
+                                if (mode === 'focus') {
+                                    focusAudioRef.current.play();
+                                } else {
+                                    breakAudioRef.current.play();
+                                }
+                            }
+                            
+                            if (vibrationEnabled && navigator.vibrate) {
+                                navigator.vibrate([200, 100, 200]);
+                            }
+                            
+                            // 모드 전환
+                            if (mode === 'focus') {
+                                setMode('break');
+                                setTimeLeft(breakTime * 60);
+                                setTotalTime(breakTime * 60);
+                                
+                                // 자동 시작 기능
+                                if (autoStart && !allSetsCompleted) {
+                                    setTimeout(() => {
+                                        setIsRunning(true);
+                                    }, 500);
+                                }
+                            } else {
+                                // 휴식 모드가 끝난 후
+                                if (currentSet < sets) {
+                                    // 아직 세트가 남아있으면
+                                    setCurrentSet(prev => prev + 1);
+                                    setMode('focus');
+                                    setTimeLeft(focusTime * 60);
+                                    setTotalTime(focusTime * 60);
+                                    
+                                    // 자동 시작 기능
+                                    if (autoStart && !allSetsCompleted) {
+                                        setTimeout(() => {
+                                            setIsRunning(true);
+                                        }, 500);
+                                    }
+                                } else {
+                                    // 모든 세트가 완료되면
+                                    setMode('focus');
+                                    setTimeLeft(focusTime * 60);
+                                    setTotalTime(focusTime * 60);
+                                    setAllSetsCompleted(true); // 모든 세트 완료 표시
+                                    
+                                    // 모든 세트 완료 알림
+                                    if (soundEnabled) {
+                                        if (focusAudioRef.current) {
+                                            focusAudioRef.current.play();
+                                            setTimeout(() => {
+                                                if (focusAudioRef.current) focusAudioRef.current.play();
+                                            }, 500);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }, 100); // 100ms마다 업데이트
+                } else {
+                    drawTimer();
+                }
+                
+                return () => {
+                    if (intervalId) {
+                        clearInterval(intervalId);
+                    }
+                };
+            }, [isRunning, mode, focusTime, breakTime, sets, currentSet, drawTimer, soundEnabled, vibrationEnabled, totalTime, timeLeft]);
+            
+            // 컴포넌트 마운트 시 타이머 그리기
+            React.useEffect(() => {
+                drawTimer();
+            }, [drawTimer]);
+            
+            // 토글 스위치 컴포넌트
+            const ToggleSwitch = ({ label, checked, onChange, id, disabled }) => {
+                return (
+                    <div className="toggle-container">
+                        <span id={`${id}-label`}>{label}</span>
+                        <label className="toggle-switch" htmlFor={id}>
+                            <input 
+                                id={id}
+                                name={id}
+                                type="checkbox" 
+                                checked={checked} 
+                                onChange={onChange}
+                                aria-labelledby={`${id}-label`}
+                                disabled={disabled}
+                            />
+                            <span className="toggle-slider"></span>
+                        </label>
+                    </div>
+                );
+            };
+            
+            return (
+                <div className="app-container">
+                    <button 
+                        className="menu-button"
+                        onClick={() => setIsSidebarOpen(true)}
+                        aria-label="설정 메뉴 열기"
+                        id="menu-button"
+                    >
+                        ☰
+                    </button>
+                    
+                    <div 
+                        className={`overlay ${isSidebarOpen ? 'active' : ''}`}
+                        onClick={() => setIsSidebarOpen(false)}
+                        aria-hidden="true"
+                    ></div>
+                    
+                    <div className={`sidebar ${isSidebarOpen ? 'open' : ''}`} aria-label="설정 메뉴">
+                        <div className="sidebar-header">
+                            <h1 id="settings-header">설정</h1>
+                        </div>
+                        
+                        <div className={`sidebar-section ${isRunning && !isPaused ? 'disabled' : ''}`}>
+                            <h2 id="time-settings-header">시간 설정</h2>
+                            <div className="time-pickers">
+                                <div className="time-picker">
+                                    <label className="time-picker-label" htmlFor="focus-time-picker">집중 시간 (분)</label>
+                                    <div className="picker-container">
+                                        <div className="picker-highlight"></div>
+                                        <div 
+                                            id="focus-time-picker"
+                                            className="picker-values" 
+                                            ref={focusPickerRef}
+                                            onScroll={() => handlePickerScroll(focusPickerRef, setFocusTime)}
+                                        >
+                                            {renderPickerItems(60, focusTime, (value) => {
+                                                if (!isRunning) {
+                                                    setFocusTime(value);
+                                                    if (mode === 'focus') {
+                                                        setTimeLeft(value * 60);
+                                                        setTotalTime(value * 60);
+                                                        drawTimer();
+                                                    }
+                                                }
+                                            })}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div className="time-picker">
+                                    <label className="time-picker-label" htmlFor="break-time-picker">휴식 시간 (분)</label>
+                                    <div className="picker-container">
+                                        <div className="picker-highlight"></div>
+                                        <div 
+                                            id="break-time-picker"
+                                            className="picker-values" 
+                                            ref={breakPickerRef}
+                                            onScroll={() => handlePickerScroll(breakPickerRef, setBreakTime)}
+                                        >
+                                            {renderPickerItems(60, breakTime, (value) => {
+                                                if (!isRunning) {
+                                                    setBreakTime(value);
+                                                    if (mode === 'break') {
+                                                        setTimeLeft(value * 60);
+                                                        setTotalTime(value * 60);
+                                                        drawTimer();
+                                                    }
+                                                }
+                                            })}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div className={`sidebar-section ${isRunning? 'disabled' : ''}`}>
+                            <h2 id="mode-selection-header">모드 선택</h2>
+                            <div className="mode-selector" role="group" aria-labelledby="mode-selection-header">
+                                <button 
+                                    id="focus-mode-button"
+                                    name="focus-mode"
+                                    className={`mode-button ${mode === 'focus' ? 'active' : ''}`}
+                                    onClick={() => {
+                                        if (!isRunning) {
+                                            setMode('focus');
+                                            setTimeLeft(focusTime * 60);
+                                            setTotalTime(focusTime * 60);
+                                            drawTimer();
+                                        }
+                                    }}
+                                    disabled={isRunning}
+                                    aria-pressed={mode === 'focus'}
+                                >
+                                    집중
+                                </button>
+                                <button 
+                                    id="break-mode-button"
+                                    name="break-mode"
+                                    className={`mode-button ${mode === 'break' ? 'active' : ''}`}
+                                    onClick={() => {
+                                        if (!isRunning) {
+                                            setMode('break');
+                                            setTimeLeft(breakTime * 60);
+                                            setTotalTime(breakTime * 60);
+                                            drawTimer();
+                                        }
+                                    }}
+                                    disabled={isRunning}
+                                    aria-pressed={mode === 'break'}
+                                >
+                                    휴식
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div className={`sidebar-section ${isRunning && !isPaused ? 'disabled' : ''}`}>
+                            <h2 id="sets-setting-header">세트 설정</h2>
+                            <div className="sets-container">
+                                <label htmlFor="sets-counter" className="sets-label">반복 횟수</label>
+                                <div id="sets-counter" className="sets-counter">
+                                    <button 
+                                        className="sets-button" 
+                                         onClick={handleDecreaseSets}
+                                         disabled={sets <= 1 || isRunning}
+                                        aria-label="반복 횟수 감소"
+                                    >
+                                         -
+                                    </button>
+                                    <div className="sets-value" aria-live="polite">
+                                        {sets}
+                                    </div>
+                                    <button 
+                                        className="sets-button"
+                                        onClick={handleIncreaseSets}
+                                        disabled={sets >= 10 || isRunning || isPaused}
+                                        aria-label="반복 횟수 증가"
+                                    >
+                                        +
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="toggle-container" style={{ marginTop: '10px' }}>
+                                <span id="auto-start-label">자동 시작</span>
+                                <label className="toggle-switch" htmlFor="auto-start-toggle">
+                                    <input 
+                                        id="auto-start-toggle"
+                                        name="auto-start-toggle"
+                                        type="checkbox" 
+                                        checked={autoStart} 
+                                        onChange={() => {
+                                            if (!isRunning) {
+                                                setAutoStart(prev => !prev);
+                                            }
+                                        }}
+                                        disabled={isRunning}
+                                        aria-labelledby="auto-start-label"
+                                    />
+                                    <span className="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div className={`sidebar-section ${isRunning && !isPaused ? 'disabled' : ''}`}>
+                            <h2 id="theme-setting-header">테마 설정</h2>
+                            <ToggleSwitch 
+                                id="dark-mode-toggle"
+                                label="다크 모드" 
+                                checked={isDarkMode} 
+                                onChange={() => {
+                                    if (!isRunning) {
+                                        setIsDarkMode(prev => !prev);
+                                    }
+                                }}
+                                disabled={isRunning}
+                            />
+                        </div>
+                        
+                        <div className={`sidebar-section ${isRunning && !isPaused ? 'disabled' : ''}`}>
+                            <h2 id="color-selection-header">차트 색상 선택</h2>
+                            <div className="color-options" role="radiogroup" aria-labelledby="color-selection-header">
+                                <div 
+                                    className={`color-option red ${timerColor === 'red' ? 'selected' : ''}`}
+                                    onClick={() => {
+                                        if (!isRunning) {
+                                            setTimerColor('red');
+                                            drawTimer();
+                                        }
+                                    }}
+                                    role="radio"
+                                    aria-checked={timerColor === 'red'}
+                                    tabIndex={timerColor === 'red' ? 0 : -1}
+                                    aria-label="빨간색"
+                                    id="red-color-option"
+                                ></div>
+                                <div 
+                                    className={`color-option green ${timerColor === 'green' ? 'selected' : ''}`}
+                                    onClick={() => {
+                                        if (!isRunning) {
+                                            setTimerColor('green');
+                                            drawTimer();
+                                        }
+                                    }}
+                                    role="radio"
+                                    aria-checked={timerColor === 'green'}
+                                    tabIndex={timerColor === 'green' ? 0 : -1}
+                                    aria-label="초록색"
+                                    id="green-color-option"
+                                ></div>
+                            </div>
+                        </div>
+                        
+                        <div className={`sidebar-section ${isRunning && !isPaused ? 'disabled' : ''}`}>
+                            <h2 id="notifications-header">알림 설정</h2>
+                            <ToggleSwitch 
+                                id="sound-toggle"
+                                label="소리 알림" 
+                                checked={soundEnabled} 
+                                onChange={() => {
+                                    if (!isRunning) {
+                                        setSoundEnabled(prev => !prev);
+                                    }
+                                }}
+                                disabled={isRunning}
+                            />
+                            <ToggleSwitch 
+                                id="vibration-toggle"
+                                label="진동 알림" 
+                                checked={vibrationEnabled} 
+                                onChange={() => {
+                                    if (!isRunning) {
+                                        setVibrationEnabled(prev => !prev);
+                                    }
+                                }}
+                                disabled={isRunning}
+                            />
+                        </div>
+                        
+                        <div className={`sidebar-section ${isRunning && !isPaused ? 'disabled' : ''}`}>
+                            <h2 id="display-settings-header">표시 설정</h2>
+                            <ToggleSwitch 
+                                id="ticks-toggle"
+                                label="눈금 표시" 
+                                checked={showTicks} 
+                                onChange={() => {
+                                    if (!isRunning) {
+                                        setShowTicks(prev => !prev);
+                                        drawTimer();
+                                    }
+                                }}
+                                disabled={isRunning}
+                            />
+                            <ToggleSwitch 
+                                id="numbers-toggle"
+                                label="시간 숫자 표시" 
+                                checked={showNumbers} 
+                                onChange={() => {
+                                    if (!isRunning) {
+                                        setShowNumbers(prev => !prev);
+                                        drawTimer();
+                                    }
+                                }}
+                                disabled={isRunning}
+                            />
+                            <ToggleSwitch 
+                                id="time-display-toggle"
+                                label="실시간 시간 표시" 
+                                checked={showTimeDisplay} 
+                                onChange={() => {
+                                    if (!isRunning) {
+                                        setShowTimeDisplay(prev => !prev);
+                                    }
+                                }}
+                                disabled={isRunning}
+                            />
+                        </div>
+                    </div>
+                    
+                    <div className="timer-container">
+                        <div className="timer-display">
+                            <canvas 
+                                ref={canvasRef}
+                                className="timer-canvas"
+                                aria-label="뽀모도로 타이머 시각화"
+                                role="img"
+                            />
+                            
+                            <div 
+                                ref={timePreviewRef}
+                                className="time-preview"
+                                aria-live="polite"
+                                aria-atomic="true"
+                            ></div>
+                            
+                            {showTimeDisplay && (
+                                <div 
+                                    className="timer-time"
+                                    aria-live="polite"
+                                    aria-atomic="true"
+                                    role="timer"
+                                    aria-label={`현재 시간: ${formatTime(timeLeft)}`}
+                                >
+                                    {formatTime(timeLeft)}
+                                </div>
+                            )}
+                            
+                            <div 
+                                className="set-display"
+                                aria-live="polite"
+                                aria-atomic="true"
+                            >
+                                {currentSet}/{sets} 세트 - {mode === 'focus' ? '집중' : '휴식'}
+                            </div>
+                        </div>
+                       발
+                       <div className="timer-actions">
+                        <button 
+                            className="timer-button" 
+                            onClick={isRunning ? pauseTimer : startTimer}
+                            aria-label={isRunning ? "일시정지" : "시작"}
+                            id="play-pause-button"
+                        >
+                            {isRunning ? '∥' : '▶'}
+                        </button>
+
+                            {(isPaused || timeLeft < totalTime) && (
+                                <button 
+                                    className="timer-button" 
+                                    onClick={resetTimer}
+                                    aria-label="타이머 리셋"
+                                    id="reset-button"
+                                >
+                                ↺
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+        // 앱 렌더링 기모링~
+        const rootElement = document.getElementById('root');
+        ReactDOM.render(React.createElement(App), rootElement);
+    </script>
+</body>
+</html>
