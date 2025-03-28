@@ -368,10 +368,16 @@
         .picker-values {
             height: 100%;
             box-sizing: border-box;
-            overflow-y: auto;
+            overflow-y: scroll;
             scroll-snap-type: y mandatory;
             padding: 40px 0;
             -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            touch-action: pan-y;
+            will-change: scroll-position;
+            user-select: none;
+            -webkit-user-select: none;
         }
         
         .picker-values::-webkit-scrollbar {
@@ -384,6 +390,7 @@
             align-items: center;
             justify-content: center;
             scroll-snap-align: center;
+            scroll-snap-stop: always;
             cursor: pointer;
             transition: color 0.3s;
             color: rgba(var(--text-color-rgb), 0.6);
