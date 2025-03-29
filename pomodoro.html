@@ -774,7 +774,7 @@
                 const handleTouchStart = (e) => {
                     if (isRunning) return;
                     
-                    e.preventDefault(); // 터치 시작 시 기본 동작 방지
+                    e.preventDefault(); 
                     
                     const rect = svg.getBoundingClientRect();
                     const touch = e.touches[0];
@@ -788,7 +788,6 @@
                 const handleTouchMove = (e) => {
                     if (!isDragging || isRunning) return;
                     
-                    // 스크롤 방지를 위해 항상 기본 동작 방지
                     e.preventDefault();
                     
                     const rect = svg.getBoundingClientRect();
@@ -810,6 +809,8 @@
                 // 좌표로부터 시간 설정 및 미리보기 업데이트
                 const updatePreviewFromCoords = (x, y) => {
                 if (!svgRef.current) return;
+
+                if (isNaN(x) || isNaN(y)) return;
 
                 const svg = svgRef.current;
 
