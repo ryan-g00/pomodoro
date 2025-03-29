@@ -785,6 +785,7 @@
                 
                 const handleTouchMove = (e) => {
                     if (!isDragging || isRunning) return;
+                    e.preventDefault();
                     
                     const rect = svg.getBoundingClientRect();
                     const touch = e.touches[0];
