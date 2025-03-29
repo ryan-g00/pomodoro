@@ -372,7 +372,6 @@
             scroll-snap-type: y mandatory;
             padding: 40px 0;
             -webkit-overflow-scrolling: touch;
-            transform: translateZ(0);
         }
         
         .picker-values::-webkit-scrollbar {
@@ -602,8 +601,8 @@
                 }
             };
             
-            // 200ms마다 피커 값을 확인
-            const intervalId = setInterval(checkPickerValues, 200);
+            // 300ms마다 피커 값을 확인
+            const intervalId = setInterval(checkPickerValues, 300);
             
             return () => clearInterval(intervalId);
             }, [focusTime, breakTime, mode, isRunning, setTimeLeft, setTotalTime, drawTimer]);
@@ -867,6 +866,34 @@
                 }
                 return items;
             };
+            /*
+            // 휠 피커 스크롤 이벤트 처리
+            const handlePickerScroll = (ref, setValue) => {
+                if (!ref.current) return;
+                
+                // 스크롤 이벤트를 즉시 처리하지 않고, 스크롤이 멈추면 처리하도록 수정
+                clearTimeout(ref.current.scrollTimeout);
+                
+                ref.current.scrollTimeout = setTimeout(() => {
+                    const scrollTop = ref.current.scrollTop;
+                    const itemHeight = 40;
+                    const index = Math.round(scrollTop / itemHeight);
+                    
+                    // 범위 체크 없이 바로 적용
+                    setValue(index);
+                    
+                    // 모드에 따라 타이머 업데이트
+                    if (mode === 'focus' && setValue === setFocusTime) {
+                        setTimeLeft(index * 60);
+                        setTotalTime(index * 60);
+                    } else if (mode === 'break' && setValue === setBreakTime) {
+                        setTimeLeft(index * 60);
+                        setTotalTime(index * 60);
+                    }
+                    
+                    drawTimer();
+                }, 100); // 스크롤이 멈추고 100ms 후에 값을 읽음
+            }; */
             
             // 오디오 요소 생성
             React.useEffect(() => {
