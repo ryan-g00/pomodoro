@@ -530,7 +530,6 @@
 <body>
     <div id="root"></div>
     <script type="text/babel">
-
         const App = () => {
             // 상태 관리
             const [focusTime, setFocusTime] = React.useState(25);
@@ -547,90 +546,14 @@
             const [timerColor, setTimerColor] = React.useState('red');
             const [showTicks, setShowTicks] = React.useState(true);
             const [showNumbers, setShowNumbers] = React.useState(true);
-            const [showTimeDisplay, setShowTimeDisplay] = React.useState(true);
+            const [showTimeDisplay, setShowTimeDisplay] = React.useState(false);
             const [soundEnabled, setSoundEnabled] = React.useState(false);
             const [vibrationEnabled, setVibrationEnabled] = React.useState(true);
             const [autoStart, setAutoStart] = React.useState(false);
             const [allSetsCompleted, setAllSetsCompleted] = React.useState(false); // 모든 세트 완료 여부
             const [audioInitialized, setAudioInitialized] = React.useState(false);
-            // WakeLock 참조 생성
-    const wakeLockRef = React.useRef(null);
-    
-    // WakeLock 관리 효과
-    React.useEffect(() => {
-        let wakeLockTimeoutId = null;
-        
-        const requestWakeLock = async () => {
-            // 이미 WakeLock이 있으면 갱신하지 않음
-            if (wakeLockRef.current) return;
+            let wakeLock = null;
             
-            if ('wakeLock' in navigator && navigator.wakeLock) {
-                try {
-                    wakeLockRef.current = await navigator.wakeLock.request('screen');
-                    
-                    // WakeLock이 자동으로 해제될 경우 처리
-                    wakeLockRef.current.addEventListener('release', () => {
-                        wakeLockRef.current = null;
-                        
-                        // 여전히 타이머가 실행 중이면 WakeLock 다시 요청
-                        if (isRunning) {
-                            // 약간의 지연 후 재시도 (API 스로틀링 방지)
-                            wakeLockTimeoutId = setTimeout(requestWakeLock, 500);
-                        }
-                    });
-                } catch (err) {
-                    wakeLockRef.current = null;
-                }
-            }
-        };
-        
-        const releaseWakeLock = async () => {
-            if (wakeLockTimeoutId) {
-                clearTimeout(wakeLockTimeoutId);
-                wakeLockTimeoutId = null;
-            }
-            
-            if (wakeLockRef.current) {
-                try {
-                    await wakeLockRef.current.release();
-                    wakeLockRef.current = null;
-                } catch (e) {
-                    // 오류 발생 시 참조만 제거
-                    wakeLockRef.current = null;
-                }
-            }
-        };
-        
-        // 가시성 변경 이벤트 핸들러
-        const handleVisibilityChange = async () => {
-            if (document.visibilityState === 'visible') {
-                if (isRunning) {
-                    await requestWakeLock();
-                }
-            } else {
-                // 화면이 보이지 않을 때는 WakeLock 해제
-                await releaseWakeLock();
-            }
-        };
-        
-        // 타이머 실행 상태에 따라 WakeLock 적용
-        if (isRunning) {
-            requestWakeLock();
-        } else {
-            releaseWakeLock();
-        }
-        
-        // 가시성 변경 이벤트 리스너 등록
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-        
-        // 클린업 함수
-        return () => {
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
-            releaseWakeLock();
-        };
-    }, [isRunning]);
-
-
             // 참조 생성
             const svgRef = React.useRef(null);
             const timePreviewRef = React.useRef(null);
@@ -638,6 +561,7 @@
             const breakAudioRef = React.useRef(null);
             const focusPickerRef = React.useRef(null);
             const breakPickerRef = React.useRef(null);
+            const wakeLockRef = React.useRef(null);
             
             // 다크 모드 설정
             React.useEffect(() => {
@@ -699,7 +623,8 @@
                 
                 return () => clearInterval(intervalId);
             }, [focusTime, breakTime, mode, isRunning]);
-
+            
+            
             // 시간 포맷팅 함수
             const formatTime = (seconds) => {
                 const mins = Math.floor(seconds / 60);
@@ -936,44 +861,34 @@
                 
                 // 좌표로부터 시간 설정 및 미리보기 업데이트
                 const updatePreviewFromCoords = (x, y) => {
-                    if (!svgRef.current || isNaN(x) || isNaN(y)) return;
+                    if (!svgRef.current) return;
+                    if (isNaN(x) || isNaN(y)) return;
 
                     const svg = svgRef.current;
-                    const rect = svg.getBoundingClientRect();
 
                     const centerX = svg.clientWidth / 2;
                     const centerY = svg.clientHeight / 2;
+
                     const dx = x - centerX;
                     const dy = y - centerY;
-
                     let angle = Math.atan2(dy, dx);
-                    if (angle < -0.5 * Math.PI) angle += 2 * Math.PI;
+
+                    angle = angle < -0.5 * Math.PI ? angle + 2 * Math.PI : angle;
 
                     const percent = (angle + 0.5 * Math.PI) / (2 * Math.PI);
                     const mins = Math.max(0, Math.min(60, Math.round(percent * 60)));
-                    const newTimeInSeconds = mins * 60;
 
-                    // 미리보기 시간 표시
                     const timePreview = timePreviewRef.current;
-                    if (timePreview) {
-                        timePreview.textContent = `${mins.toString().padStart(2, '0')}:00`;
-                        timePreview.style.display = 'block';
-                    }
+                    timePreview.textContent = `${mins.toString().padStart(2, '0')}:00`;
+                    timePreview.style.display = 'block';
 
+                    const newTimeInSeconds = mins * 60;
                     setTimeLeft(newTimeInSeconds);
-                    if (mode === 'focus') setFocusTime(mins);
-                    else setBreakTime(mins);
 
-                    const children = svg.childNodes;
-                    for (let i = children.length - 1; i >= 0; i--) {
-                        const el = children[i];
-                        const tag = el.tagName ? el.tagName.toLowerCase() : "";
-                        if (tag !== "line" && tag !== "text") {
-                            svg.removeChild(el);
-                        }
+                    while (svg.firstChild) {
+                        svg.removeChild(svg.firstChild);
                     }
 
-                    // 배경 원 그리기
                     const centerXSVG = 300;
                     const centerYSVG = 300;
                     const radius = 250;
@@ -986,15 +901,13 @@
                     backgroundCircle.setAttribute("cy", centerYSVG);
                     backgroundCircle.setAttribute("r", radius);
                     backgroundCircle.setAttribute("fill", shouldUseDarkTheme ? '#333' : '#e0e0e0');
-                    backgroundCircle.style.pointerEvents = "none";
+                    backgroundCircle.style.pointerEvents = "none"; // 추가: 포인터 이벤트 무시
                     svg.appendChild(backgroundCircle);
 
-                    // 진행률 path 그리기
                     let timeRatio = newTimeInSeconds / 3600;
                     if (Math.round(newTimeInSeconds) === 3600) {
-                        timeRatio = 0.9999; // full circle 문제 방지
+                        timeRatio = 0.9999;
                     }
-
                     const startAngle = -Math.PI / 2;
                     const endAngle = startAngle + (2 * Math.PI * timeRatio);
 
@@ -1017,10 +930,61 @@
 
                     path.setAttribute("d", d);
                     path.setAttribute("fill", timerColor === 'red' ? '#ff4d4d' : '#4caf50');
-                    path.style.pointerEvents = "none";
+                    path.style.pointerEvents = "none"; // 추가: 포인터 이벤트 무시
                     svg.appendChild(path);
-                };
 
+                    if (showTicks) {
+                        for (let i = 0; i < 60; i++) {
+                            const angle = (i * 6 - 90) * (Math.PI / 180);
+                            const inner = i % 5 === 0 ? radius + 4 : radius + 8;
+                            const outer = i % 5 === 0 ? radius + 18 : radius + 12;
+                            const x1 = centerXSVG + inner * Math.cos(angle);
+                            const y1 = centerYSVG + inner * Math.sin(angle);
+                            const x2 = centerXSVG + outer * Math.cos(angle);
+                            const y2 = centerYSVG + outer * Math.sin(angle);
+
+                            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                            line.setAttribute("x1", x1);
+                            line.setAttribute("y1", y1);
+                            line.setAttribute("x2", x2);
+                            line.setAttribute("y2", y2);
+                            line.setAttribute("stroke", shouldUseDarkTheme ? '#fff' : '#333');
+                            line.setAttribute("stroke-width", i % 5 === 0 ? 3 : 1);
+                            line.style.pointerEvents = "none"; // 추가: 포인터 이벤트 무시
+                            svg.appendChild(line);
+                        }
+                    }
+
+                    if (showNumbers) {
+                        for (let i = 0; i < 12; i++) {
+                            const text = (i * 5).toString();
+                            const angle = (i * 30 - 90) * (Math.PI / 180);
+                            const tx = centerXSVG + (radius + 50) * Math.cos(angle);
+                            const ty = centerYSVG + (radius + 50) * Math.sin(angle);
+
+                            const textElement = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                            textElement.setAttribute("x", tx);
+                            textElement.setAttribute("y", ty);
+                            textElement.setAttribute("fill", shouldUseDarkTheme ? '#fff' : '#333');
+                            textElement.setAttribute("font-size", "20px");
+                            textElement.setAttribute("text-anchor", "middle");
+                            textElement.setAttribute("dominant-baseline", "middle");
+                            textElement.textContent = text;
+                            textElement.style.pointerEvents = "none"; // 추가: 포인터 이벤트 무시
+                            textElement.style.userSelect = "none";
+                            textElement.style.webkitUserSelect = "none";
+                            textElement.style.mozUserSelect = "none";
+                            textElement.style.msUserSelect = "none";
+                            svg.appendChild(textElement);
+                        }
+                    }
+
+                    if (mode === 'focus') {
+                        setFocusTime(mins);
+                    } else {
+                        setBreakTime(mins);
+                    }
+                };
 
                 
                 // 이벤트 리스너 추가
@@ -1099,6 +1063,19 @@
             
             // 타이머 시작
             const startTimer = async () => {
+                if ('wakeLock' in navigator && navigator.wakeLock.request) {
+                try {
+                    if (wakeLockRef.current) {
+                        await wakeLockRef.current.release();
+                        wakeLockRef.current = null;
+                    }
+                    wakeLockRef.current = await navigator.wakeLock.request('screen');
+                    console.log("✅ Wake Lock 요청 성공");
+                } catch (err) {
+                    console.warn("❌ Wake Lock 요청 실패:", err);
+                }
+            }
+
             
             // ✅ 사파리용 오디오 재생 권한 확보 (무음 재생)
             if (!audioInitialized && focusAudioRef.current && breakAudioRef.current) {
@@ -1168,6 +1145,17 @@
             const pauseTimer = async () => {
                 setIsRunning(false);
                 setIsPaused(true);
+
+                // 타이머 멈추면 Wake Lock 해제
+                if (wakeLockRef.current) {
+                    try {
+                        await wakeLockRef.current.release();
+                        wakeLockRef.current = null;
+                        console.log("🔓 Wake Lock 해제됨");
+                    } catch (err) {
+                        console.error("🔴 Wake Lock 해제 실패:", err);
+                    }
+                }
             };
             
             // 타이머 리셋
@@ -1284,6 +1272,35 @@
                 setTotalTime(3600);
                 updateSVG();
             }, [updateSVG]);
+            
+            React.useEffect(() => {
+                const handleVisibilityChange = () => {
+                    if (document.visibilityState === 'visible' && isRunning) {
+                    if ('wakeLock' in navigator && navigator.wakeLock.request) {
+                        navigator.wakeLock.request('screen')
+                        .then(lock => {
+                            wakeLockRef.current = lock;
+                            console.log("🔁 visibilitychange: Wake Lock 재요청");
+                        })
+                        .catch(err => {
+                            console.warn("🔁 Wake Lock 재요청 실패:", err);
+                        });
+                    }
+                    }
+                };
+                
+                document.addEventListener('visibilitychange', handleVisibilityChange);
+
+                return () => {
+                    document.removeEventListener('visibilitychange', handleVisibilityChange);
+                    if (wakeLockRef.current) {
+                    wakeLockRef.current.release().then(() => {
+                        wakeLockRef.current = null;
+                        console.log("🧹 언마운트 시 Wake Lock 해제됨");
+                    });
+                    }
+                };
+                }, [isRunning]);
             
             // 토글 스위치 컴포넌트
             const ToggleSwitch = ({ label, checked, onChange, id, disabled }) => {
