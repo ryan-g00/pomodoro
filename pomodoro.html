@@ -777,28 +777,50 @@
                 
                 const handleTouchStart = (e) => {
                     if (isRunning) return;
+                    e.preventDefault();
                     
-                    e.preventDefault(); 
-                    
+                    const svg = svgRef.current;
                     const rect = svg.getBoundingClientRect();
                     const touch = e.touches[0];
+                    
+                    // 터치 위치 계산
                     const x = touch.clientX - rect.left;
                     const y = touch.clientY - rect.top;
                     
-                    isDragging = true;
-                    updatePreviewFromCoords(x, y);
+                    // 중심점과 거리 계산
+                    const centerX = rect.width / 2;
+                    const centerY = rect.height / 2;
+                    const dx = x - centerX;
+                    const dy = y - centerY;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    // 차트 내부인지 확인 (원 안에 있는지)
+                    // SVG viewBox가 600x600이고 원 반지름이 220인 경우 비율 계산
+                    const radius = (220 / 600) * rect.width;
+                    
+                    // 원 안에 있는 경우에만 드래그 시작
+                    if (distance <= radius) {
+                        isDragging = true;
+                        updatePreviewFromCoords(x, y);
+                    }
                 };
 
                 const handleTouchMove = (e) => {
+                    // 드래그 중이 아니거나 타이머가 실행 중이면 무시
                     if (!isDragging || isRunning) return;
                     
+                    // 기본 동작 방지 (스크롤 등)
                     e.preventDefault();
                     
+                    const svg = svgRef.current;
                     const rect = svg.getBoundingClientRect();
                     const touch = e.touches[0];
+                    
+                    // 터치 위치 계산
                     const x = touch.clientX - rect.left;
                     const y = touch.clientY - rect.top;
                     
+                    // 좌표 업데이트 (원 안/밖 상관없이 진행)
                     updatePreviewFromCoords(x, y);
                 };
 
