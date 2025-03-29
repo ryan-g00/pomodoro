@@ -1493,7 +1493,7 @@
                         </div>
                     </div>
                     
-                    <div className="timer-container">
+                    <div className="timer-container" style={{ touchAction: 'none' }}>
                         <div className="timer-display">
                             <svg 
                                 ref={svgRef}
@@ -1502,6 +1502,7 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 aria-label="뽀모도로 타이머 시각화"
                                 role="img"
+                                style={{ touchAction: 'none' }}
                             ></svg>
                             
                             <div 
