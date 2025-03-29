@@ -561,7 +561,7 @@
             const breakAudioRef = React.useRef(null);
             const focusPickerRef = React.useRef(null);
             const breakPickerRef = React.useRef(null);
-            
+            const wakeLockRef = React.useRef(null);
             
             // 다크 모드 설정
             React.useEffect(() => {
@@ -1063,12 +1063,18 @@
             
             // 타이머 시작
             const startTimer = async () => {
-                if ('wakeLock' in navigator) {
-                    try {
-                    wakeLock = await navigator.wakeLock.request('screen');
-                    } catch (err) {
+                if ('wakeLock' in navigator && navigator.wakeLock.request) {
+                try {
+                    if (wakeLockRef.current) {
+                        await wakeLockRef.current.release();
+                        wakeLockRef.current = null;
                     }
+                    wakeLockRef.current = await navigator.wakeLock.request('screen');
+                    console.log("✅ Wake Lock 요청 성공");
+                } catch (err) {
+                    console.warn("❌ Wake Lock 요청 실패:", err);
                 }
+            }
 
             
             // ✅ 사파리용 오디오 재생 권한 확보 (무음 재생)
@@ -1136,17 +1142,21 @@
             };
             
             // 타이머 일시정지
-            const pauseTimer = () => {
+            const pauseTimer = async () => {
                 setIsRunning(false);
                 setIsPaused(true);
 
                 // 타이머 멈추면 Wake Lock 해제
-                if (wakeLock) {
-                    wakeLock.release().then(() => {
-                    wakeLock = null;
-                    });
+                if (wakeLockRef.current) {
+                    try {
+                        await wakeLockRef.current.release();
+                        wakeLockRef.current = null;
+                        console.log("🔓 Wake Lock 해제됨");
+                    } catch (err) {
+                        console.error("🔴 Wake Lock 해제 실패:", err);
+                    }
                 }
-                };
+            };
             
             // 타이머 리셋
             const resetTimer = () => {
@@ -1262,6 +1272,35 @@
                 setTotalTime(3600);
                 updateSVG();
             }, [updateSVG]);
+            
+            React.useEffect(() => {
+                const handleVisibilityChange = () => {
+                    if (document.visibilityState === 'visible' && isRunning) {
+                    if ('wakeLock' in navigator && navigator.wakeLock.request) {
+                        navigator.wakeLock.request('screen')
+                        .then(lock => {
+                            wakeLockRef.current = lock;
+                            console.log("🔁 visibilitychange: Wake Lock 재요청");
+                        })
+                        .catch(err => {
+                            console.warn("🔁 Wake Lock 재요청 실패:", err);
+                        });
+                    }
+                    }
+                };
+                
+                document.addEventListener('visibilitychange', handleVisibilityChange);
+
+                return () => {
+                    document.removeEventListener('visibilitychange', handleVisibilityChange);
+                    if (wakeLockRef.current) {
+                    wakeLockRef.current.release().then(() => {
+                        wakeLockRef.current = null;
+                        console.log("🧹 언마운트 시 Wake Lock 해제됨");
+                    });
+                    }
+                };
+                }, [isRunning]);
             
             // 토글 스위치 컴포넌트
             const ToggleSwitch = ({ label, checked, onChange, id, disabled }) => {
