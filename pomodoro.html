@@ -644,7 +644,7 @@
                     
                     const centerX = 300;
                     const centerY = 300;
-                    const radius = 220;
+                    const radius = 250;
                     
                     // 메인 모드일 때는 테마에 따라, 휴식 모드일 때는 반전
                     const isBreakMode = mode === 'break';
@@ -707,7 +707,7 @@
                     for (let i = 0; i < 60; i++) {
                         const angle = (i * 6 - 90) * (Math.PI / 180);
                         const inner = i % 5 === 0 ? radius + 4 : radius + 8;
-                        const outer = i % 5 === 0 ? radius + 28 : radius + 14;
+                        const outer = i % 5 === 0 ? radius + 18 : radius + 12;
                         const x1 = centerX + inner * Math.cos(angle);
                         const y1 = centerY + inner * Math.sin(angle);
                         const x2 = centerX + outer * Math.cos(angle);
@@ -730,14 +730,14 @@
                     for (let i = 0; i < 12; i++) {
                         const text = (i * 5).toString();
                         const angle = (i * 30 - 90) * (Math.PI / 180);
-                        const tx = centerX + (radius + 50) * Math.cos(angle);
-                        const ty = centerY + (radius + 50) * Math.sin(angle);
+                        const tx = centerX + (radius + 40) * Math.cos(angle);
+                        const ty = centerY + (radius + 40) * Math.sin(angle);
                         
                         const textElement = document.createElementNS("http://www.w3.org/2000/svg", "text");
                         textElement.setAttribute("x", tx);
                         textElement.setAttribute("y", ty);
                         textElement.setAttribute("fill", shouldUseDarkTheme ? '#fff' : '#333');
-                        textElement.setAttribute("font-size", "24px");
+                        textElement.setAttribute("font-size", "20px");
                         textElement.setAttribute("text-anchor", "middle");
                         textElement.setAttribute("dominant-baseline", "middle");
                         textElement.textContent = text;
@@ -776,7 +776,7 @@
                     
                     // 차트 내부인지 확인 (원 안에 있는지)
                     // SVG viewBox가 600x600이고 원 반지름이 220인 경우 비율 계산
-                    const radius = (220 / 600) * rect.width;
+                    const radius = (250 / 600) * rect.width;
                     
                     // 원 안에 있는 경우에만 드래그 시작
                     if (distance <= radius) {
@@ -823,7 +823,7 @@
                     
                     // 차트 내부인지 확인 (원 안에 있는지)
                     // SVG viewBox가 600x600이고 원 반지름이 220인 경우 비율 계산
-                    const radius = (220 / 600) * rect.width;
+                    const radius = (250 / 600) * rect.width;
                     
                     // 원 안에 있는 경우에만 드래그 시작
                     if (distance <= radius) {
@@ -891,7 +891,7 @@
 
                     const centerXSVG = 300;
                     const centerYSVG = 300;
-                    const radius = 220;
+                    const radius = 250;
 
                     const isBreakMode = mode === 'break';
                     const shouldUseDarkTheme = (isDarkMode && !isBreakMode) || (!isDarkMode && isBreakMode);
@@ -937,7 +937,7 @@
                         for (let i = 0; i < 60; i++) {
                             const angle = (i * 6 - 90) * (Math.PI / 180);
                             const inner = i % 5 === 0 ? radius + 4 : radius + 8;
-                            const outer = i % 5 === 0 ? radius + 28 : radius + 14;
+                            const outer = i % 5 === 0 ? radius + 18 : radius + 12;
                             const x1 = centerXSVG + inner * Math.cos(angle);
                             const y1 = centerYSVG + inner * Math.sin(angle);
                             const x2 = centerXSVG + outer * Math.cos(angle);
@@ -966,7 +966,7 @@
                             textElement.setAttribute("x", tx);
                             textElement.setAttribute("y", ty);
                             textElement.setAttribute("fill", shouldUseDarkTheme ? '#fff' : '#333');
-                            textElement.setAttribute("font-size", "24px");
+                            textElement.setAttribute("font-size", "20px");
                             textElement.setAttribute("text-anchor", "middle");
                             textElement.setAttribute("dominant-baseline", "middle");
                             textElement.textContent = text;
