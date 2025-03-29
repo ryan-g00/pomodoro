@@ -774,6 +774,8 @@
                 const handleTouchStart = (e) => {
                     if (isRunning) return;
                     
+                    e.preventDefault(); // 터치 시작 시 기본 동작 방지
+                    
                     const rect = svg.getBoundingClientRect();
                     const touch = e.touches[0];
                     const x = touch.clientX - rect.left;
@@ -782,9 +784,11 @@
                     isDragging = true;
                     updatePreviewFromCoords(x, y);
                 };
-                
+
                 const handleTouchMove = (e) => {
                     if (!isDragging || isRunning) return;
+                    
+                    // 스크롤 방지를 위해 항상 기본 동작 방지
                     e.preventDefault();
                     
                     const rect = svg.getBoundingClientRect();
@@ -794,10 +798,11 @@
                     
                     updatePreviewFromCoords(x, y);
                 };
-                
-                const handleTouchEnd = () => {
+
+                const handleTouchEnd = (e) => {
                     if (!isDragging || isRunning) return;
                     
+                    e.preventDefault();
                     isDragging = false;
                     timePreview.style.display = 'none';
                 };
@@ -927,9 +932,9 @@
                 document.addEventListener('mousemove', handleMouseMove);
                 document.addEventListener('mouseup', handleMouseUp);
                 
-                svg.addEventListener('touchstart', handleTouchStart);
+                svg.addEventListener('touchstart', handleTouchStart, { passive: false });
                 document.addEventListener('touchmove', handleTouchMove, { passive: false });
-                document.addEventListener('touchend', handleTouchEnd);
+                document.addEventListener('touchend', handleTouchEnd, { passive: false });
                 
                 return () => {
                     svg.removeEventListener('mousedown', handleMouseDown);
