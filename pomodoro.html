@@ -1060,28 +1060,7 @@
                     breakAudio.pause();
                 };
             }, []);
-
-            // 무음 오디오 생성 함수 (사파리 정책 뚫는 용)
-            const createSilentAudio = () => {
-                try {
-                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                    const oscillator = audioContext.createOscillator();
-                    const gainNode = audioContext.createGain();
-                    
-                    gainNode.gain.value = 0.001; // 거의 들리지 않게
-                    oscillator.connect(gainNode);
-                    gainNode.connect(audioContext.destination);
-                    
-                    oscillator.start(0);
-                    setTimeout(() => oscillator.stop(0.001), 1); // 매우 짧게
-                    
-                    return audioContext;
-                } catch (err) {
-                    console.warn("Audio context creation failed:", err);
-                    return null;
-                }
-                };
-
+            
             // 타이머 시작
             const startTimer = async () => {
                 if ('wakeLock' in navigator) {
@@ -1090,15 +1069,41 @@
                     } catch (err) {
                     }
                 }
+
             
             // ✅ 사파리용 오디오 재생 권한 확보 (무음 재생)
-            if (!audioInitialized) {
-                // Web Audio API로 무음 생성 및 재생
-                const audioContext = createSilentAudio();
-                if (audioContext) {
-                    setAudioInitialized(true);
-                }
+            if (!audioInitialized && focusAudioRef.current && breakAudioRef.current) {
+                try {
+                // 0.1로 했더니 간간히 짧게 들리는 현상 발생함. 0.001로 변경
+                focusAudioRef.current.volume = 0.001;
+                focusAudioRef.current.currentTime = 0;
+                const playPromise = focusAudioRef.current.play();
+                focusAudioRef.current.pause();
+
+                playPromise
+                    .then(() => {
+                        focusAudioRef.current.currentTime = 0;
+                        focusAudioRef.current.volume = 1; // 원래대로 복구
+                    })
+                    .catch(() => {});
+
+                // 0.1로 했더니 간간히 짧게 들리는 현상 발생함. 0.001로 변경    
+                breakAudioRef.current.volume = 0.001;
+                breakAudioRef.current.currentTime = 0;
+                const breakPlayPromise = breakAudioRef.current.play();
+                breakAudioRef.current.pause(); // 즉시 중지 시도
+                
+                breakPlayPromise
+                    .then(() => {
+                        breakAudioRef.current.currentTime = 0;
+                        breakAudioRef.current.volume = 1; // 원래대로 복구
+                    })
+                    .catch(() => {});
+                setAudioInitialized(true);
+            } catch (err) {
+                console.warn("Audio warm-up failed:", err);
             }
+        }
 
             if (allSetsCompleted) {
                 // 세트가 모두 끝난 경우: 타이머와 세트 초기화
