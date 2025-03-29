@@ -72,7 +72,7 @@
         body.break-mode .timer-time,
         body.break-mode .set-display,
         body.break-mode .timer-button {
-            color: inherit;
+            color: inherit; /* body의 color 값 상속 */
         }
         
         .app-container {
@@ -84,7 +84,6 @@
             align-items: center;
             justify-content: center;
             z-index: 1; /* 필요에 따라 z-index 설정 */
-            touch-action: none;
         }
         
         .timer-container {
@@ -95,7 +94,6 @@
             width: 100%;
             height: 100%;
             position: relative;
-            touch-action: none;
         }
         .timer-display {
             position: relative;
@@ -104,16 +102,14 @@
             max-width: 700px;
             max-height: 700px;
             margin: 0 auto;
-            touch-action: none;
         }
         
-        .timer-svg {
+        .timer-canvas {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            touch-action: none;
         }
         
         .timer-time {
@@ -153,6 +149,7 @@
             transition: color 0.3s;
         }
         
+        /* 휴식 모드일 때 텍스트 색상 반전 */
         body.dark-theme.break-mode .timer-time,
         body.dark-theme.break-mode .time-preview,
         body.dark-theme.break-mode .set-display {
@@ -165,6 +162,7 @@
             color: #ffffff;
         }
 
+        /* 세트 설정 스타일 수정 */
         .sets-container {
             display: flex;
             align-items: center;
@@ -375,13 +373,6 @@
             padding: 40px 0;
             -webkit-overflow-scrolling: touch;
             transform: translateZ(0);
-            scrollbar-width: none;
-            -ms-overflow-style: none;
-            touch-action: pan-y;
-            will-change: scroll-position;
-            /* 터치 처리 최적화 */
-            user-select: none;
-            -webkit-user-select: none;
         }
         
         .picker-values::-webkit-scrollbar {
@@ -394,7 +385,6 @@
             align-items: center;
             justify-content: center;
             scroll-snap-align: center;
-            scroll-snap-stop: always;
             cursor: pointer;
             transition: color 0.3s;
             color: rgba(var(--text-color-rgb), 0.6);
@@ -522,7 +512,6 @@
         }
     </style>
 </head>
-
 <body>
     <div id="root"></div>
     <script type="text/babel">
@@ -534,7 +523,7 @@
             const [currentSet, setCurrentSet] = React.useState(0);
             const [mode, setMode] = React.useState('focus');
             const [timeLeft, setTimeLeft] = React.useState(focusTime * 60);
-            const [totalTime, setTotalTime] = React.useState(3600);
+            const [totalTime, setTotalTime] = React.useState(focusTime * 60);
             const [isRunning, setIsRunning] = React.useState(false);
             const [isPaused, setIsPaused] = React.useState(false);
             const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
@@ -547,16 +536,14 @@
             const [vibrationEnabled, setVibrationEnabled] = React.useState(true);
             const [autoStart, setAutoStart] = React.useState(false);
             const [allSetsCompleted, setAllSetsCompleted] = React.useState(false); // 모든 세트 완료 여부
-            let wakeLock = null;
             
             // 참조 생성
-            const svgRef = React.useRef(null);
+            const canvasRef = React.useRef(null);
             const timePreviewRef = React.useRef(null);
             const focusAudioRef = React.useRef(null);
             const breakAudioRef = React.useRef(null);
             const focusPickerRef = React.useRef(null);
             const breakPickerRef = React.useRef(null);
-            
             
             // 다크 모드 설정
             React.useEffect(() => {
@@ -578,46 +565,48 @@
                 }
                 
                 // 모드 변경 시 타이머 다시 그리기
-                updateSVG();
-            }, [mode]);
+                drawTimer();
+            }, [mode, drawTimer]);
 
             // 피커 값을 주기적으로 확인하는 useEffect 추가
             React.useEffect(() => {
-                const checkPickerValues = () => {
-                    if (focusPickerRef.current && !isRunning) {
-                        const scrollTop = focusPickerRef.current.scrollTop;
-                        const itemHeight = 40;
-                        const index = Math.round(scrollTop / itemHeight);
-                        
-                        if (focusTime !== index) {
-                            setFocusTime(index);
-                            if (mode === 'focus') {
-                                setTimeLeft(index * 60);
-                                updateSVG();
-                            }
-                        }
-                    }
-                    
-                    if (breakPickerRef.current && !isRunning) {
-                        const scrollTop = breakPickerRef.current.scrollTop;
-                        const itemHeight = 40;
-                        const index = Math.round(scrollTop / itemHeight);
-                        
-                        if (breakTime !== index) {
-                            setBreakTime(index);
-                            if (mode === 'break') {
-                                setTimeLeft(index * 60);
-                                updateSVG();
-                            }
-                        }
-                    }
-                };
+            const checkPickerValues = () => {
+                if (focusPickerRef.current && !isRunning) {
+                const scrollTop = focusPickerRef.current.scrollTop;
+                const itemHeight = 40;
+                const index = Math.round(scrollTop / itemHeight);
                 
-                // 200ms마다 피커 값을 확인
-                const intervalId = setInterval(checkPickerValues, 200);
+                if (focusTime !== index) {
+                    setFocusTime(index);
+                    if (mode === 'focus') {
+                    setTimeLeft(index * 60);
+                    setTotalTime(index * 60);
+                    drawTimer();
+                    }
+                }
+                }
                 
-                return () => clearInterval(intervalId);
-            }, [focusTime, breakTime, mode, isRunning]);
+                if (breakPickerRef.current && !isRunning) {
+                const scrollTop = breakPickerRef.current.scrollTop;
+                const itemHeight = 40;
+                const index = Math.round(scrollTop / itemHeight);
+                
+                if (breakTime !== index) {
+                    setBreakTime(index);
+                    if (mode === 'break') {
+                    setTimeLeft(index * 60);
+                    setTotalTime(index * 60);
+                    drawTimer();
+                    }
+                }
+                }
+            };
+            
+            // 200ms마다 피커 값을 확인
+            const intervalId = setInterval(checkPickerValues, 200);
+            
+            return () => clearInterval(intervalId);
+            }, [focusTime, breakTime, mode, isRunning, setTimeLeft, setTotalTime, drawTimer]);
             
             
             // 시간 포맷팅 함수
@@ -627,75 +616,50 @@
                 return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
             };
             
-            // SVG 업데이트 함수
-            const updateSVG = React.useCallback(() => {
-                const svg = svgRef.current;
-                if (!svg) return;
+            // 타이머 그리기 함수
+            const drawTimer = React.useCallback(() => {
+                const canvas = canvasRef.current;
+                if (!canvas) return;
                 
-                // SVG 내용 초기화
-                while (svg.firstChild) {
-                    svg.removeChild(svg.firstChild);
-                }
-                
-                const centerX = 300;
-                const centerY = 300;
+                const ctx = canvas.getContext('2d');
+                canvas.width = 600;
+                canvas.height = 600;
+                const centerX = canvas.width / 2;
+                const centerY = canvas.height / 2;
                 const radius = 220;
+                
+                // 캔버스 초기화
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // 배경 원 그리기 - 테마에 따라 색상 반전 고려
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
                 
                 // 메인 모드일 때는 테마에 따라, 휴식 모드일 때는 반전
                 const isBreakMode = mode === 'break';
                 const shouldUseDarkTheme = (isDarkMode && !isBreakMode) || (!isDarkMode && isBreakMode);
                 
-                // 배경 원 그리기
-                const backgroundCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-                backgroundCircle.setAttribute("cx", centerX);
-                backgroundCircle.setAttribute("cy", centerY);
-                backgroundCircle.setAttribute("r", radius);
-                backgroundCircle.setAttribute("fill", shouldUseDarkTheme ? '#333' : '#e0e0e0');
-                svg.appendChild(backgroundCircle);
+                ctx.fillStyle = shouldUseDarkTheme ? '#333' : '#e0e0e0';
+                ctx.fill();
                 
                 // 진행 상황에 따른 원형 차트 그리기
-                if (timeLeft > 0 && totalTime > 0) { // 0으로 나누는 오류 방지
-                    let progress = timeLeft / totalTime;
-                    if (progress === 1) {
-                    progress = 0.9999; // 완전한 원 말고 거의 다 찬 원으로
-                    }
-                    
-                    // 원형 차트의 각도 계산
-                    const startAngle = -Math.PI / 2; // 12시 방향에서 시작
-                    const endAngle = startAngle + (2 * Math.PI * progress); // 진행도에 따라 각도 계산
-                    
-                    // SVG 경로 생성
-                    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-                    
-                    // 중심점
-                    const x0 = centerX;
-                    const y0 = centerY;
-                    
-                    // 시작점 (12시 방향)
-                    const x1 = centerX;
-                    const y1 = centerY - radius;
-                    
-                    // 종료점 (진행 각도에 따라 계산)
-                    const x2 = centerX + radius * Math.cos(endAngle);
-                    const y2 = centerY + radius * Math.sin(endAngle);
-                    
-                    // 큰 호인지 작은 호인지 결정 (180도 초과 여부)
-                    const largeArcFlag = progress > 0.5 ? 1 : 0;
-                    
-                    // SVG 경로 데이터 생성
-                    const d = [
-                        `M ${x0} ${y0}`, // 중심점으로 이동
-                        `L ${x1} ${y1}`, // 시작점으로 선 그리기
-                        `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2}`, // 호 그리기
-                        'Z' // 경로 닫기 (중심점으로 다시 연결)
-                    ].join(' ');
-                    
-                    path.setAttribute("d", d);
-                    path.setAttribute("fill", timerColor === 'red' ? '#ff4d4d' : '#4caf50');
-                    svg.appendChild(path);
+                const startAngle = -0.5 * Math.PI;
+                
+                // 선택한 시간에 따른 각도 계산 (60분 기준)
+                const maxAngle = (totalTime / 3600) * 2 * Math.PI; // 60분(3600초)이 2π
+                const progress = timeLeft / totalTime;
+                const endAngle = startAngle + (progress * maxAngle);
+                
+                if (progress > 0) {
+                    ctx.beginPath();
+                    ctx.moveTo(centerX, centerY);
+                    ctx.arc(centerX, centerY, radius, startAngle, endAngle, false);
+                    ctx.closePath();
+                    ctx.fillStyle = timerColor === 'red' ? '#ff4d4d' : '#4caf50';
+                    ctx.fill();
                 }
                 
-                // 눈금 그리기 (showTicks가 true일 때만)
+                // 눈금 그리기 (showTicks가 true일 때만) - 반전 처리
                 if (showTicks) {
                     for (let i = 0; i < 60; i++) {
                         const angle = (i * 6 - 90) * (Math.PI / 180);
@@ -706,51 +670,52 @@
                         const x2 = centerX + outer * Math.cos(angle);
                         const y2 = centerY + outer * Math.sin(angle);
                         
-                        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-                        line.setAttribute("x1", x1);
-                        line.setAttribute("y1", y1);
-                        line.setAttribute("x2", x2);
-                        line.setAttribute("y2", y2);
-                        line.setAttribute("stroke", shouldUseDarkTheme ? '#fff' : '#333');
-                        line.setAttribute("stroke-width", i % 5 === 0 ? 3 : 1);
-                        svg.appendChild(line);
+                        ctx.beginPath();
+                        ctx.strokeStyle = shouldUseDarkTheme ? '#fff' : '#333';
+                        ctx.lineWidth = i % 5 === 0 ? 3 : 1; // 5분 단위는 더 굵게
+                        ctx.moveTo(x1, y1);
+                        ctx.lineTo(x2, y2);
+                        ctx.stroke();
                     }
                 }
                 
-                // 숫자 그리기 (showNumbers가 true일 때만)
+                // 숫자 그리기 (showNumbers가 true일 때만) - 반전 처리
                 if (showNumbers) {
                     for (let i = 0; i < 12; i++) {
                         const text = (i * 5).toString();
                         const angle = (i * 30 - 90) * (Math.PI / 180);
-                        const tx = centerX + (radius + 50) * Math.cos(angle);
+                        const tx = centerX + (radius + 50) * Math.cos(angle); // 50px 더 바깥쪽
                         const ty = centerY + (radius + 50) * Math.sin(angle);
                         
-                        const textElement = document.createElementNS("http://www.w3.org/2000/svg", "text");
-                        textElement.setAttribute("x", tx);
-                        textElement.setAttribute("y", ty);
-                        textElement.setAttribute("fill", shouldUseDarkTheme ? '#fff' : '#333');
-                        textElement.setAttribute("font-size", "24px");
-                        textElement.setAttribute("text-anchor", "middle");
-                        textElement.setAttribute("dominant-baseline", "middle");
-                        textElement.textContent = text;
-                        svg.appendChild(textElement);
+                        ctx.fillStyle = shouldUseDarkTheme ? '#fff' : '#333';
+                        ctx.font = "24px sans-serif"; // 고정 크기 사용
+                        ctx.textAlign = "center";
+                        ctx.textBaseline = "middle";
+                        ctx.fillText(text, tx, ty);
                     }
                 }
-
+                
+                // 일시정지 상태일 때 "일시정지됨" 텍스트 표시 - 반전 처리
+                if (isPaused) {
+                    ctx.fillStyle = shouldUseDarkTheme ? '#fff' : '#333';
+                    ctx.font = "20px sans-serif";
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.fillText("일시정지됨", centerX, centerY - 40);
+                }
             }, [timeLeft, totalTime, timerColor, showTicks, showNumbers, isPaused, isDarkMode, mode]);
-
             
             // 드래그로 시간 설정
             React.useEffect(() => {
-                const svg = svgRef.current;
+                const canvas = canvasRef.current;
                 const timePreview = timePreviewRef.current;
-                if (!svg || !timePreview) return;
-                let isDragging = false;
+                if (!canvas || !timePreview) return;
+                let isDragging = false; // 지역 변수로 변경
                 
                 const handleMouseDown = (e) => {
-                    if (isRunning) return; // 타이머 실행 중에는 설정 불가
+                    if (isRunning) return; // 타이머 실행 중이거나 일시정지 상태에서는 설정 불가
                     
-                    const rect = svg.getBoundingClientRect();
+                    const rect = canvas.getBoundingClientRect();
                     const x = e.clientX - rect.left;
                     const y = e.clientY - rect.top;
                     
@@ -758,10 +723,11 @@
                     updatePreviewFromCoords(x, y);
                 };
                 
+                // 마우스로 드래그
                 const handleMouseMove = (e) => {
                     if (!isDragging || isRunning) return;
                     
-                    const rect = svg.getBoundingClientRect();
+                    const rect = canvas.getBoundingClientRect();
                     const x = e.clientX - rect.left;
                     const y = e.clientY - rect.top;
                     
@@ -774,205 +740,94 @@
                     isDragging = false;
                     timePreview.style.display = 'none';
                 };
-                
+
+                // 터치로 드래그으으으
                 const handleTouchStart = (e) => {
                     if (isRunning) return;
-                    e.preventDefault();
                     
-                    const svg = svgRef.current;
-                    const rect = svg.getBoundingClientRect();
+                    const rect = canvas.getBoundingClientRect();
                     const touch = e.touches[0];
-                    
-                    // 터치 위치 계산
                     const x = touch.clientX - rect.left;
                     const y = touch.clientY - rect.top;
                     
-                    // 중심점과 거리 계산
-                    const centerX = rect.width / 2;
-                    const centerY = rect.height / 2;
-                    const dx = x - centerX;
-                    const dy = y - centerY;
-                    const distance = Math.sqrt(dx * dx + dy * dy);
-                    
-                    // 차트 내부인지 확인 (원 안에 있는지)
-                    // SVG viewBox가 600x600이고 원 반지름이 220인 경우 비율 계산
-                    const radius = (220 / 600) * rect.width;
-                    
-                    // 원 안에 있는 경우에만 드래그 시작
-                    if (distance <= radius) {
-                        isDragging = true;
-                        updatePreviewFromCoords(x, y);
-                    }
-                };
-
-                const handleTouchMove = (e) => {
-                    // 드래그 중이 아니거나 타이머가 실행 중이면 무시
-                    if (!isDragging || isRunning) return;
-                    
-                    // 기본 동작 방지 (스크롤 등)
-                    e.preventDefault();
-                    
-                    const svg = svgRef.current;
-                    const rect = svg.getBoundingClientRect();
-                    const touch = e.touches[0];
-                    
-                    // 터치 위치 계산
-                    const x = touch.clientX - rect.left;
-                    const y = touch.clientY - rect.top;
-                    
-                    // 좌표 업데이트 (원 안/밖 상관없이 진행)
+                    isDragging = true;
                     updatePreviewFromCoords(x, y);
                 };
 
-                const handleTouchEnd = (e) => {
+                const handleTouchMove = (e) => {
                     if (!isDragging || isRunning) return;
                     
-                    e.preventDefault();
+                    const rect = canvas.getBoundingClientRect();
+                    const touch = e.touches[0];
+                    const x = touch.clientX - rect.left;
+                    const y = touch.clientY - rect.top;
+                    
+                    updatePreviewFromCoords(x, y);
+                }
+
+                const handleTouchEnd = () => {
+                    if (!isDragging || isRunning) return;
+                    
                     isDragging = false;
                     timePreview.style.display = 'none';
                 };
                 
                 // 좌표로부터 시간 설정 및 미리보기 업데이트
                 const updatePreviewFromCoords = (x, y) => {
-                if (!svgRef.current) return;
-
-                if (isNaN(x) || isNaN(y)) return;
-
-                const svg = svgRef.current;
-
-                const centerX = svg.clientWidth / 2;
-                const centerY = svg.clientHeight / 2;
-
-                const dx = x - centerX;
-                const dy = y - centerY;
-                let angle = Math.atan2(dy, dx);
-
-                angle = angle < -0.5 * Math.PI ? angle + 2 * Math.PI : angle;
-
-                const percent = (angle + 0.5 * Math.PI) / (2 * Math.PI);
-                const mins = Math.max(0, Math.min(60, Math.round(percent * 60)));
-
-                const timePreview = timePreviewRef.current;
-                timePreview.textContent = `${mins.toString().padStart(2, '0')}:00`;
-                timePreview.style.display = 'block';
-
-                const newTimeInSeconds = mins * 60;
-                setTimeLeft(newTimeInSeconds);
-
-                while (svg.firstChild) {
-                    svg.removeChild(svg.firstChild);
-                }
-
-                const centerXSVG = 300;
-                const centerYSVG = 300;
-                const radius = 220;
-
-                const isBreakMode = mode === 'break';
-                const shouldUseDarkTheme = (isDarkMode && !isBreakMode) || (!isDarkMode && isBreakMode);
-
-                const backgroundCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-                backgroundCircle.setAttribute("cx", centerXSVG);
-                backgroundCircle.setAttribute("cy", centerYSVG);
-                backgroundCircle.setAttribute("r", radius);
-                backgroundCircle.setAttribute("fill", shouldUseDarkTheme ? '#333' : '#e0e0e0');
-                svg.appendChild(backgroundCircle);
-
-                let timeRatio = newTimeInSeconds / 3600;
-                if (Math.round(newTimeInSeconds) === 3600) {
-                    timeRatio = 0.9999;
-                }
-                const startAngle = -Math.PI / 2;
-                const endAngle = startAngle + (2 * Math.PI * timeRatio);
-
-
-                const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-
-                const x0 = centerXSVG;
-                const y0 = centerYSVG;
-                const x1 = centerXSVG;
-                const y1 = centerYSVG - radius;
-                const x2 = centerXSVG + radius * Math.cos(endAngle);
-                const y2 = centerYSVG + radius * Math.sin(endAngle);
-                const largeArcFlag = timeRatio > 0.5 ? 1 : 0;
-
-                const d = [
-                    `M ${x0} ${y0}`,
-                    `L ${x1} ${y1}`,
-                    `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2}`,
-                    'Z'
-                ].join(' ');
-
-                path.setAttribute("d", d);
-                path.setAttribute("fill", timerColor === 'red' ? '#ff4d4d' : '#4caf50');
-                svg.appendChild(path);
-
-                if (showTicks) {
-                    for (let i = 0; i < 60; i++) {
-                        const angle = (i * 6 - 90) * (Math.PI / 180);
-                        const inner = i % 5 === 0 ? radius + 4 : radius + 8;
-                        const outer = i % 5 === 0 ? radius + 28 : radius + 14;
-                        const x1 = centerXSVG + inner * Math.cos(angle);
-                        const y1 = centerYSVG + inner * Math.sin(angle);
-                        const x2 = centerXSVG + outer * Math.cos(angle);
-                        const y2 = centerYSVG + outer * Math.sin(angle);
-
-                        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-                        line.setAttribute("x1", x1);
-                        line.setAttribute("y1", y1);
-                        line.setAttribute("x2", x2);
-                        line.setAttribute("y2", y2);
-                        line.setAttribute("stroke", shouldUseDarkTheme ? '#fff' : '#333');
-                        line.setAttribute("stroke-width", i % 5 === 0 ? 3 : 1);
-                        svg.appendChild(line);
+                    const centerX = canvas.width / 2;
+                    const centerY = canvas.height / 2;
+                    
+                    const dx = x - centerX;
+                    const dy = y - centerY;
+                    let angle = Math.atan2(dy, dx);
+                    
+                    // 각도를 0~2π 범위로 변환
+                    angle = angle < -0.5 * Math.PI ? angle + 2 * Math.PI : angle;
+                    
+                    // 각도를 시간으로 변환 (2π = 60분) - 0분~60분 범위 가능
+                    const percent = (angle + 0.5 * Math.PI) / (2 * Math.PI);
+                    const mins = Math.max(0, Math.min(60, Math.round(percent * 60)));
+                    
+                    // 시간 설정 (초 단위로)
+                    const newTimeInSeconds = mins * 60;
+                    setTimeLeft(newTimeInSeconds);
+                    setTotalTime(newTimeInSeconds);
+                    
+                    // 모드에 따라 설정 시간 업데이트
+                    if (mode === 'focus') {
+                        setFocusTime(mins);
+                    } else {
+                        setBreakTime(mins);
                     }
-                }
-
-                if (showNumbers) {
-                    for (let i = 0; i < 12; i++) {
-                        const text = (i * 5).toString();
-                        const angle = (i * 30 - 90) * (Math.PI / 180);
-                        const tx = centerXSVG + (radius + 50) * Math.cos(angle);
-                        const ty = centerYSVG + (radius + 50) * Math.sin(angle);
-
-                        const textElement = document.createElementNS("http://www.w3.org/2000/svg", "text");
-                        textElement.setAttribute("x", tx);
-                        textElement.setAttribute("y", ty);
-                        textElement.setAttribute("fill", shouldUseDarkTheme ? '#fff' : '#333');
-                        textElement.setAttribute("font-size", "24px");
-                        textElement.setAttribute("text-anchor", "middle");
-                        textElement.setAttribute("dominant-baseline", "middle");
-                        textElement.textContent = text;
-                        svg.appendChild(textElement);
-                    }
-                }
-
-                if (mode === 'focus') {
-                    setFocusTime(mins);
-                } else {
-                    setBreakTime(mins);
-                }
-            };
-
+                    
+                    // 미리보기 표시
+                    timePreview.textContent = `${mins.toString().padStart(2, '0')}:00`;
+                    timePreview.style.display = 'block';
+                };
                 
-                // 이벤트 리스너 추가
-                svg.addEventListener('mousedown', handleMouseDown);
-                document.addEventListener('mousemove', handleMouseMove);
-                document.addEventListener('mouseup', handleMouseUp);
-                
-                svg.addEventListener('touchstart', handleTouchStart, { passive: false });
-                document.addEventListener('touchmove', handleTouchMove, { passive: false });
-                document.addEventListener('touchend', handleTouchEnd, { passive: false });
+                // 마우스 이벤트 리스너
+                canvas.addEventListener('mousedown', handleMouseDown);
+                canvas.addEventListener('mousemove', handleMouseMove);
+                canvas.addEventListener('mouseup', handleMouseUp);
+                canvas.addEventListener('mouseleave', handleMouseUp);
+                // 터치 이벤트 리스너
+                canvas.addEventListener('touchstart', handleTouchStart);
+                canvas.addEventListener('touchmove', handleTouchMove);
+                canvas.addEventListener('touchend', handleTouchEnd);
+                canvas.addEventListener('touchcancel', handleTouchEnd);
                 
                 return () => {
-                    svg.removeEventListener('mousedown', handleMouseDown);
-                    document.removeEventListener('mousemove', handleMouseMove);
-                    document.removeEventListener('mouseup', handleMouseUp);
-                    
-                    svg.removeEventListener('touchstart', handleTouchStart);
-                    document.removeEventListener('touchmove', handleTouchMove);
-                    document.removeEventListener('touchend', handleTouchEnd);
+                    canvas.removeEventListener('mousedown', handleMouseDown);
+                    canvas.removeEventListener('mousemove', handleMouseMove);
+                    canvas.removeEventListener('mouseup', handleMouseUp);
+                    canvas.removeEventListener('mouseleave', handleMouseUp);
+
+                    canvas.removeEventListener('touchstart', handleTouchStart);
+                    canvas.removeEventListener('touchmove', handleTouchMove);
+                    canvas.removeEventListener('touchend', handleTouchEnd);
+                    canvas.removeEventListener('touchcancel', handleTouchEnd);
                 };
-            }, [isRunning, mode, isDarkMode, showTicks, showNumbers, timerColor]);
+            }, [isRunning, isPaused, mode, setFocusTime, setBreakTime, setTimeLeft, setTotalTime]); // 의존성 배열 수정
             
             // 휠 피커 초기화
             React.useEffect(() => {
@@ -995,13 +850,13 @@
                             key={i} 
                             className={`picker-item ${i === value ? 'selected' : ''}`}
                             onClick={() => {
-                                if (!isRunning || isPaused) {
+                                if (!isRunning || isPaused) { // 타이머 실행 중이 아니거나 일시정지 상태면 변경 가능
                                     onChange(i);
                                     if ((mode === 'focus' && onChange === setFocusTime) || 
                                         (mode === 'break' && onChange === setBreakTime)) {
                                         setTimeLeft(i * 60);
-                                        // 차트 즉시 업데이트
-                                        updateChartDirectly(i);
+                                        setTotalTime(i * 60);
+                                        drawTimer();
                                     }
                                 }
                             }}
@@ -1029,15 +884,7 @@
             }, []);
             
             // 타이머 시작
-            const startTimer = async () => {
-                if ('wakeLock' in navigator) {
-                    try {
-                    wakeLock = await navigator.wakeLock.request('screen');
-                    } catch (err) {
-                    }
-                }
-
-            
+            const startTimer = () => {
             // ✅ 사파리용 오디오 재생 권한 확보 (무음 재생)
             if (focusAudioRef.current && breakAudioRef.current) {
                 try {
@@ -1052,6 +899,7 @@
                     })
                     .catch(() => {});
 
+                // break audio
                 breakAudioRef.current.volume = 0.01;
                 breakAudioRef.current.currentTime = 0;
                 breakAudioRef.current.play()
@@ -1066,20 +914,11 @@
                 }
             }
 
-            if (allSetsCompleted) {
-                // 세트가 모두 끝난 경우: 타이머와 세트 초기화
-                const newTime = focusTime * 60;
-                setTimeLeft(newTime);
-                setTotalTime(newTime);
-                setCurrentSet(0);
-                setMode('focus');
-                setAllSetsCompleted(false);
-    }
-
             // 타이머 시작
             if (!isRunning) {
                 setIsRunning(true);
                 setIsPaused(false);
+                setAllSetsCompleted(false); // 세트 완료 상태 초기화
             }
             };
 
@@ -1098,24 +937,20 @@
             
             // 타이머 일시정지
             const pauseTimer = () => {
-                setIsRunning(false);
-                setIsPaused(true);
-
-                // 타이머 멈추면 Wake Lock 해제
-                if (wakeLock) {
-                    wakeLock.release().then(() => {
-                    wakeLock = null;
-                    });
+                if (isRunning) {
+                    setIsRunning(false);
+                    setIsPaused(true);
                 }
-                };
+            };
             
             // 타이머 리셋
             const resetTimer = () => {
                 setIsRunning(false);
                 setIsPaused(false);
                 setTimeLeft(mode === 'focus' ? focusTime * 60 : breakTime * 60);
+                setTotalTime(mode === 'focus' ? focusTime * 60 : breakTime * 60);
                 setAllSetsCompleted(false); // 타이머 리셋 시 세트 완료 상태 초기화
-                updateSVG();
+                drawTimer();
             };
             
             // 세트 증가/감소 핸들러
@@ -1144,7 +979,7 @@
                         const newTimeLeft = Math.max(0, initialTimeLeft - elapsedSeconds);
                         
                         setTimeLeft(newTimeLeft);
-                        updateSVG();
+                        drawTimer();
                         
                         if (newTimeLeft <= 0) {
                             clearInterval(intervalId);
@@ -1165,7 +1000,7 @@
                             
                             // 모드 전환
                             if (mode === 'focus') {
-                                // 집중 모드가 끝나면 세트 카운트 증가
+
                                 if (currentSet < sets) {
                                     setCurrentSet(prev => prev + 1);
                                 } else {
@@ -1174,6 +1009,7 @@
 
                                 setMode('break');
                                 setTimeLeft(breakTime * 60);
+                                setTotalTime(breakTime * 60);
                                 
                                 // 자동 시작 기능
                                 if (autoStart && !allSetsCompleted) {
@@ -1187,6 +1023,7 @@
                                     // 아직 세트가 남아있으면
                                     setMode('focus');
                                     setTimeLeft(focusTime * 60);
+                                    setTotalTime(focusTime * 60);
                                     
                                     // 자동 시작 기능
                                     if (autoStart && !allSetsCompleted) {
@@ -1198,13 +1035,14 @@
                                     // 모든 세트가 완료되면
                                     setMode('focus');
                                     setTimeLeft(focusTime * 60);
+                                    setTotalTime(focusTime * 60);
                                     setAllSetsCompleted(true); // 모든 세트 완료 표시
                                 }
                             }
                         }
                     }, 100); // 100ms마다 업데이트
                 } else {
-                    updateSVG();
+                    drawTimer();
                 }
                 
                 return () => {
@@ -1212,13 +1050,12 @@
                         clearInterval(intervalId);
                     }
                 };
-            }, [isRunning, mode, focusTime, breakTime, sets, currentSet, soundEnabled, vibrationEnabled, totalTime, timeLeft, autoStart, allSetsCompleted, updateSVG]);
+            }, [isRunning, mode, focusTime, breakTime, sets, currentSet, drawTimer, soundEnabled, vibrationEnabled, totalTime, timeLeft]);
             
             // 컴포넌트 마운트 시 타이머 그리기
             React.useEffect(() => {
-                setTotalTime(3600);
-                updateSVG();
-            }, [updateSVG]);
+                drawTimer();
+            }, [drawTimer]);
             
             // 토글 스위치 컴포넌트
             const ToggleSwitch = ({ label, checked, onChange, id, disabled }) => {
@@ -1282,13 +1119,14 @@
                                                     if (mode === 'focus') {
                                                         setTimeLeft(value * 60);
                                                         setTotalTime(value * 60);
-                                                        updateSVG();
+                                                        drawTimer();
                                                     }
                                                 }
                                             })}
                                         </div>
                                     </div>
                                 </div>
+                                
                                 <div className="time-picker">
                                     <label className="time-picker-label" htmlFor="break-time-picker">휴식 시간 (분)</label>
                                     <div className="picker-container">
@@ -1305,7 +1143,7 @@
                                                     if (mode === 'break') {
                                                         setTimeLeft(value * 60);
                                                         setTotalTime(value * 60);
-                                                        updateSVG();
+                                                        drawTimer();
                                                     }
                                                 }
                                             })}
@@ -1326,7 +1164,8 @@
                                         if (!isRunning) {
                                             setMode('focus');
                                             setTimeLeft(focusTime * 60);
-                                            updateSVG();
+                                            setTotalTime(focusTime * 60);
+                                            drawTimer();
                                         }
                                     }}
                                     disabled={isRunning}
@@ -1342,7 +1181,8 @@
                                         if (!isRunning) {
                                             setMode('break');
                                             setTimeLeft(breakTime * 60);
-                                            updateSVG();
+                                            setTotalTime(breakTime * 60);
+                                            drawTimer();
                                         }
                                     }}
                                     disabled={isRunning}
@@ -1423,7 +1263,7 @@
                                     onClick={() => {
                                         if (!isRunning) {
                                             setTimerColor('red');
-                                            updateSVG();
+                                            drawTimer();
                                         }
                                     }}
                                     role="radio"
@@ -1437,7 +1277,7 @@
                                     onClick={() => {
                                         if (!isRunning) {
                                             setTimerColor('green');
-                                            updateSVG();
+                                            drawTimer();
                                         }
                                     }}
                                     role="radio"
@@ -1484,7 +1324,7 @@
                                 onChange={() => {
                                     if (!isRunning) {
                                         setShowTicks(prev => !prev);
-                                        updateSVG();
+                                        drawTimer();
                                     }
                                 }}
                                 disabled={isRunning}
@@ -1496,7 +1336,7 @@
                                 onChange={() => {
                                     if (!isRunning) {
                                         setShowNumbers(prev => !prev);
-                                        updateSVG();
+                                        drawTimer();
                                     }
                                 }}
                                 disabled={isRunning}
@@ -1515,17 +1355,14 @@
                         </div>
                     </div>
                     
-                    <div className="timer-container" style={{ touchAction: 'none' }}>
+                    <div className="timer-container">
                         <div className="timer-display">
-                            <svg 
-                                ref={svgRef}
-                                className="timer-svg"
-                                viewBox="0 0 600 600"
-                                xmlns="http://www.w3.org/2000/svg"
+                            <canvas 
+                                ref={canvasRef}
+                                className="timer-canvas"
                                 aria-label="뽀모도로 타이머 시각화"
                                 role="img"
-                                style={{ touchAction: 'none' }}
-                            ></svg>
+                            />
                             
                             <div 
                                 ref={timePreviewRef}
@@ -1553,22 +1390,7 @@
                                 {currentSet}/{sets} 세트 - {mode === 'focus' ? '집중' : '휴식'}
                             </div>
                         </div>
-
-                        {isPaused && !isRunning && (
-                                <div
-                                style={{
-                                    position: 'absolute',
-                                    top: '300px',
-                                    left: '50%',
-                                    transform: 'translateX(-50%)',
-                                    fontSize: '20px',
-                                    color: isDarkMode ? '#fff' : '#333',
-                                }}
-                                >
-                                일시정지됨
-                                </div>
-                            )}
-
+                       발
                        <div className="timer-actions">
                         <button 
                             className="timer-button" 
@@ -1579,10 +1401,16 @@
                             {isRunning ? '∥' : '▶'}
                         </button>
 
-                        {isPaused && (
-                        <button className="timer-button" onClick={resetTimer}>↺</button>
-                        )}
-
+                            {(isPaused || timeLeft < totalTime) && (
+                                <button 
+                                    className="timer-button" 
+                                    onClick={resetTimer}
+                                    aria-label="타이머 리셋"
+                                    id="reset-button"
+                                >
+                                ↺
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
