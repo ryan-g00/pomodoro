@@ -700,8 +700,19 @@
                 // 눈금 그리기 (showTicks가 true일 때만)
                 if (showTicks) {
                     for (let i = 0; i < 60; i++) {
-                        // ... 기존 코드 ...
+                        const angle = (i * 6 - 90) * (Math.PI / 180);
+                        const inner = i % 5 === 0 ? radius + 4 : radius + 8;
+                        const outer = i % 5 === 0 ? radius + 28 : radius + 14;
+                        const x1 = centerX + inner * Math.cos(angle);
+                        const y1 = centerY + inner * Math.sin(angle);
+                        const x2 = centerX + outer * Math.cos(angle);
+                        const y2 = centerY + outer * Math.sin(angle);
                         
+                        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                        line.setAttribute("x1", x1);
+                        line.setAttribute("y1", y1);
+                        line.setAttribute("x2", x2);
+                        line.setAttribute("y2", y2);
                         line.setAttribute("stroke", shouldUseDarkTheme ? '#fff' : '#333');
                         line.setAttribute("stroke-width", i % 5 === 0 ? 3 : 1);
                         line.style.pointerEvents = "none";
@@ -712,8 +723,17 @@
                 // 숫자 그리기 (showNumbers가 true일 때만)
                 if (showNumbers) {
                     for (let i = 0; i < 12; i++) {
-                        // ... 기존 코드 ...
+                        const text = (i * 5).toString();
+                        const angle = (i * 30 - 90) * (Math.PI / 180);
+                        const tx = centerX + (radius + 50) * Math.cos(angle);
+                        const ty = centerY + (radius + 50) * Math.sin(angle);
                         
+                        const textElement = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                        textElement.setAttribute("x", tx);
+                        textElement.setAttribute("y", ty);
+                        textElement.setAttribute("fill", shouldUseDarkTheme ? '#fff' : '#333');
+                        textElement.setAttribute("font-size", "24px");
+                        textElement.setAttribute("text-anchor", "middle");
                         textElement.setAttribute("dominant-baseline", "middle");
                         textElement.textContent = text;
                         textElement.style.pointerEvents = "none";
