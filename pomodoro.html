@@ -530,6 +530,61 @@
 <body>
     <div id="root"></div>
     <script type="text/babel">
+        
+        const useWakeLockManager = (isRunning) => {
+                const wakeLockRef = React.useRef(null);
+
+                React.useEffect(() => {
+                    const requestWakeLock = async () => {
+                        if ('wakeLock' in navigator && navigator.wakeLock.request) {
+                            try {
+                                if (!wakeLockRef.current) {
+                                    wakeLockRef.current = await navigator.wakeLock.request("screen");
+                                    console.log("✅ Wake Lock 요청됨");
+                                }
+                            } catch (err) {
+                                console.error("❌ Wake Lock 요청 실패:", err);
+                            }
+                        }
+                    };
+
+                    const releaseWakeLock = async () => {
+                        if (wakeLockRef.current) {
+                            try {
+                                await wakeLockRef.current.release();
+                                wakeLockRef.current = null;
+                                console.log("🔓 Wake Lock 해제됨");
+                            } catch (err) {
+                                console.error("❌ Wake Lock 해제 실패:", err);
+                            }
+                        }
+                    };
+
+                    const handleVisibilityChange = async () => {
+                        if (document.visibilityState === 'visible') {
+                            if (isRunning) {
+                                await requestWakeLock();
+                            } else {
+                                await releaseWakeLock();
+                            }
+                        }
+                    };
+
+                    if (isRunning) {
+                        requestWakeLock();
+                    } else {
+                        releaseWakeLock();
+                    }
+
+                    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+                    return () => {
+                        document.removeEventListener('visibilitychange', handleVisibilityChange);
+                        releaseWakeLock();
+                    };
+                }, [isRunning]);
+            };
+
         const App = () => {
             // 상태 관리
             const [focusTime, setFocusTime] = React.useState(25);
@@ -622,60 +677,6 @@
                 
                 return () => clearInterval(intervalId);
             }, [focusTime, breakTime, mode, isRunning]);
-            
-            const useWakeLockManager = (isRunning) => {
-                const wakeLockRef = React.useRef(null);
-
-                React.useEffect(() => {
-                    const requestWakeLock = async () => {
-                        if ('wakeLock' in navigator && navigator.wakeLock.request) {
-                            try {
-                                if (!wakeLockRef.current) {
-                                    wakeLockRef.current = await navigator.wakeLock.request("screen");
-                                    console.log("✅ Wake Lock 요청됨");
-                                }
-                            } catch (err) {
-                                console.error("❌ Wake Lock 요청 실패:", err);
-                            }
-                        }
-                    };
-
-                    const releaseWakeLock = async () => {
-                        if (wakeLockRef.current) {
-                            try {
-                                await wakeLockRef.current.release();
-                                wakeLockRef.current = null;
-                                console.log("🔓 Wake Lock 해제됨");
-                            } catch (err) {
-                                console.error("❌ Wake Lock 해제 실패:", err);
-                            }
-                        }
-                    };
-
-                    const handleVisibilityChange = async () => {
-                        if (document.visibilityState === 'visible') {
-                            if (isRunning) {
-                                await requestWakeLock();
-                            } else {
-                                await releaseWakeLock();
-                            }
-                        }
-                    };
-
-                    if (isRunning) {
-                        requestWakeLock();
-                    } else {
-                        releaseWakeLock();
-                    }
-
-                    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-                    return () => {
-                        document.removeEventListener('visibilitychange', handleVisibilityChange);
-                        releaseWakeLock();
-                    };
-                }, [isRunning]);
-            };
 
             // 시간 포맷팅 함수
             const formatTime = (seconds) => {
@@ -913,34 +914,44 @@
                 
                 // 좌표로부터 시간 설정 및 미리보기 업데이트
                 const updatePreviewFromCoords = (x, y) => {
-                    if (!svgRef.current) return;
-                    if (isNaN(x) || isNaN(y)) return;
+                    if (!svgRef.current || isNaN(x) || isNaN(y)) return;
 
                     const svg = svgRef.current;
+                    const rect = svg.getBoundingClientRect();
 
                     const centerX = svg.clientWidth / 2;
                     const centerY = svg.clientHeight / 2;
-
                     const dx = x - centerX;
                     const dy = y - centerY;
-                    let angle = Math.atan2(dy, dx);
 
-                    angle = angle < -0.5 * Math.PI ? angle + 2 * Math.PI : angle;
+                    let angle = Math.atan2(dy, dx);
+                    if (angle < -0.5 * Math.PI) angle += 2 * Math.PI;
 
                     const percent = (angle + 0.5 * Math.PI) / (2 * Math.PI);
                     const mins = Math.max(0, Math.min(60, Math.round(percent * 60)));
-
-                    const timePreview = timePreviewRef.current;
-                    timePreview.textContent = `${mins.toString().padStart(2, '0')}:00`;
-                    timePreview.style.display = 'block';
-
                     const newTimeInSeconds = mins * 60;
-                    setTimeLeft(newTimeInSeconds);
 
-                    while (svg.firstChild) {
-                        svg.removeChild(svg.firstChild);
+                    // 미리보기 시간 표시
+                    const timePreview = timePreviewRef.current;
+                    if (timePreview) {
+                        timePreview.textContent = `${mins.toString().padStart(2, '0')}:00`;
+                        timePreview.style.display = 'block';
                     }
 
+                    setTimeLeft(newTimeInSeconds);
+                    if (mode === 'focus') setFocusTime(mins);
+                    else setBreakTime(mins);
+
+                    const children = svg.childNodes;
+                    for (let i = children.length - 1; i >= 0; i--) {
+                        const el = children[i];
+                        const tag = el.tagName ? el.tagName.toLowerCase() : "";
+                        if (tag !== "line" && tag !== "text") {
+                            svg.removeChild(el);
+                        }
+                    }
+
+                    // 배경 원 그리기
                     const centerXSVG = 300;
                     const centerYSVG = 300;
                     const radius = 250;
@@ -953,13 +964,15 @@
                     backgroundCircle.setAttribute("cy", centerYSVG);
                     backgroundCircle.setAttribute("r", radius);
                     backgroundCircle.setAttribute("fill", shouldUseDarkTheme ? '#333' : '#e0e0e0');
-                    backgroundCircle.style.pointerEvents = "none"; // 추가: 포인터 이벤트 무시
+                    backgroundCircle.style.pointerEvents = "none";
                     svg.appendChild(backgroundCircle);
 
+                    // 진행률 path 그리기
                     let timeRatio = newTimeInSeconds / 3600;
                     if (Math.round(newTimeInSeconds) === 3600) {
-                        timeRatio = 0.9999;
+                        timeRatio = 0.9999; // full circle 문제 방지
                     }
+
                     const startAngle = -Math.PI / 2;
                     const endAngle = startAngle + (2 * Math.PI * timeRatio);
 
@@ -982,61 +995,10 @@
 
                     path.setAttribute("d", d);
                     path.setAttribute("fill", timerColor === 'red' ? '#ff4d4d' : '#4caf50');
-                    path.style.pointerEvents = "none"; // 추가: 포인터 이벤트 무시
+                    path.style.pointerEvents = "none";
                     svg.appendChild(path);
-
-                    if (showTicks) {
-                        for (let i = 0; i < 60; i++) {
-                            const angle = (i * 6 - 90) * (Math.PI / 180);
-                            const inner = i % 5 === 0 ? radius + 4 : radius + 8;
-                            const outer = i % 5 === 0 ? radius + 18 : radius + 12;
-                            const x1 = centerXSVG + inner * Math.cos(angle);
-                            const y1 = centerYSVG + inner * Math.sin(angle);
-                            const x2 = centerXSVG + outer * Math.cos(angle);
-                            const y2 = centerYSVG + outer * Math.sin(angle);
-
-                            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-                            line.setAttribute("x1", x1);
-                            line.setAttribute("y1", y1);
-                            line.setAttribute("x2", x2);
-                            line.setAttribute("y2", y2);
-                            line.setAttribute("stroke", shouldUseDarkTheme ? '#fff' : '#333');
-                            line.setAttribute("stroke-width", i % 5 === 0 ? 3 : 1);
-                            line.style.pointerEvents = "none"; // 추가: 포인터 이벤트 무시
-                            svg.appendChild(line);
-                        }
-                    }
-
-                    if (showNumbers) {
-                        for (let i = 0; i < 12; i++) {
-                            const text = (i * 5).toString();
-                            const angle = (i * 30 - 90) * (Math.PI / 180);
-                            const tx = centerXSVG + (radius + 50) * Math.cos(angle);
-                            const ty = centerYSVG + (radius + 50) * Math.sin(angle);
-
-                            const textElement = document.createElementNS("http://www.w3.org/2000/svg", "text");
-                            textElement.setAttribute("x", tx);
-                            textElement.setAttribute("y", ty);
-                            textElement.setAttribute("fill", shouldUseDarkTheme ? '#fff' : '#333');
-                            textElement.setAttribute("font-size", "20px");
-                            textElement.setAttribute("text-anchor", "middle");
-                            textElement.setAttribute("dominant-baseline", "middle");
-                            textElement.textContent = text;
-                            textElement.style.pointerEvents = "none"; // 추가: 포인터 이벤트 무시
-                            textElement.style.userSelect = "none";
-                            textElement.style.webkitUserSelect = "none";
-                            textElement.style.mozUserSelect = "none";
-                            textElement.style.msUserSelect = "none";
-                            svg.appendChild(textElement);
-                        }
-                    }
-
-                    if (mode === 'focus') {
-                        setFocusTime(mins);
-                    } else {
-                        setBreakTime(mins);
-                    }
                 };
+
 
                 
                 // 이벤트 리스너 추가
