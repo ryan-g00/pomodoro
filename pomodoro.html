@@ -553,34 +553,7 @@
             const [autoStart, setAutoStart] = React.useState(false);
             const [allSetsCompleted, setAllSetsCompleted] = React.useState(false); // 모든 세트 완료 여부
             const [audioInitialized, setAudioInitialized] = React.useState(false);
-            
-            // WakeLock 관리 효과
-            React.useEffect(() => {
-                let wakeLock = null;
-
-                const requestWakeLock = async () => {
-                    if ('wakeLock' in navigator && navigator.wakeLock) {
-                    try {
-                        wakeLock = await navigator.wakeLock.request('screen');
-                        wakeLock.addEventListener('release', () => {
-                        console.log('🔓 Wake Lock released, re-requesting...');
-                        requestWakeLock(); // 해제되면 바로 다시 요청
-                        });
-                        console.log("✅ Wake Lock requested and locked");
-                    } catch (err) {
-                        console.warn("❌ Wake Lock request failed:", err);
-                    }
-                    }
-                };
-
-                requestWakeLock(); // 앱이 켜지자마자 요청
-
-                return () => {
-                    if (wakeLock) {
-                    wakeLock.release();
-                    }
-                };
-                }, []);
+            const wakeLockRef = React.useRef(null); //
 
             // 참조 생성
             const svgRef = React.useRef(null);
@@ -1005,6 +978,36 @@
                 breakPickerRef.current.scrollTop = scrollPos;
                 }
             }, [focusTime, breakTime]);
+
+            React.useEffect(() => {
+                const handleVisibilityChange = () => {
+                    if (document.visibilityState === 'visible' && isRunning) {
+                    if ('wakeLock' in navigator && navigator.wakeLock.request) {
+                        navigator.wakeLock.request('screen')
+                        .then(lock => {
+                            wakeLockRef.current = lock;
+                            console.log("🔁 visibilitychange: Wake Lock 재요청");
+                        })
+                        .catch(err => {
+                            console.warn("🔁 Wake Lock 재요청 실패:", err);
+                        });
+                    }
+                    }
+                };
+
+                document.addEventListener('visibilitychange', handleVisibilityChange);
+
+                return () => {
+                    document.removeEventListener('visibilitychange', handleVisibilityChange);
+                    if (wakeLockRef.current) {
+                    wakeLockRef.current.release().then(() => {
+                        wakeLockRef.current = null;
+                        console.log("🧹 언마운트 시 Wake Lock 해제됨");
+                    });
+                    }
+                };
+                }, [isRunning]);
+
             
             // 휠 피커 아이템 렌더링
             const renderPickerItems = (max, value, onChange) => {
@@ -1085,6 +1088,19 @@
             }
         }
 
+            if ('wakeLock' in navigator && navigator.wakeLock.request) {
+                try {
+                if (wakeLockRef.current) {
+                    await wakeLockRef.current.release();
+                    wakeLockRef.current = null;
+                }
+                wakeLockRef.current = await navigator.wakeLock.request('screen');
+                console.log("✅ Wake Lock 요청 성공");
+                } catch (err) {
+                console.warn("❌ Wake Lock 요청 실패:", err);
+                }
+            }
+
             if (allSetsCompleted) {
                 // 세트가 모두 끝난 경우: 타이머와 세트 초기화
                 const newTime = focusTime * 60;
@@ -1119,6 +1135,17 @@
             const pauseTimer = async () => {
                 setIsRunning(false);
                 setIsPaused(true);
+
+                // ✅ Wake Lock 해제
+                if (wakeLockRef.current) {
+                    try {
+                    await wakeLockRef.current.release();
+                    wakeLockRef.current = null;
+                    console.log("🔓 Wake Lock 해제됨");
+                    } catch (err) {
+                    console.error("🔴 Wake Lock 해제 실패:", err);
+                    }
+                }
             };
             
             // 타이머 리셋
