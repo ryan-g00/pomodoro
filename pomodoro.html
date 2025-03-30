@@ -1270,7 +1270,60 @@
             
             // 토글 스위치 컴포넌트
             const ToggleSwitch = ({ label, checked, onChange, id, disabled }) => {
-                return (
+                
+React.useEffect(() => {
+  const requestWakeLock = async () => {
+    try {
+      if ('wakeLock' in navigator && navigator.wakeLock.request) {
+        if (wakeLockRef.current) {
+          await wakeLockRef.current.release();
+        }
+        wakeLockRef.current = await navigator.wakeLock.request('screen');
+        console.log('✅ Wake Lock 요청 성공');
+      }
+    } catch (err) {
+      console.warn('❌ Wake Lock 요청 실패:', err);
+    }
+  };
+
+  if (isRunning) {
+    requestWakeLock(); // 실행 중일 때 항상 요청
+  }
+
+  return () => {
+    if (wakeLockRef.current) {
+      wakeLockRef.current.release().then(() => {
+        console.log('🧹 Wake Lock 해제됨');
+      });
+    }
+  };
+}, [isRunning]);
+
+React.useEffect(() => {
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === 'visible' && isRunning) {
+      if ('wakeLock' in navigator && navigator.wakeLock.request) {
+        navigator.wakeLock.request('screen')
+          .then((lock) => {
+            wakeLockRef.current = lock;
+            console.log('🔁 visibilitychange: Wake Lock 재요청');
+          })
+          .catch((err) => {
+            console.warn('❌ Wake Lock 재요청 실패:', err);
+          });
+      }
+    }
+  };
+
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+
+  return () => {
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+  };
+}, [isRunning]);
+
+
+return (
                     <div className="toggle-container">
                         <span id={`${id}-label`}>{label}</span>
                         <label className="toggle-switch" htmlFor={id}>
@@ -1289,7 +1342,60 @@
                 );
             };
             
-            return (
+            
+React.useEffect(() => {
+  const requestWakeLock = async () => {
+    try {
+      if ('wakeLock' in navigator && navigator.wakeLock.request) {
+        if (wakeLockRef.current) {
+          await wakeLockRef.current.release();
+        }
+        wakeLockRef.current = await navigator.wakeLock.request('screen');
+        console.log('✅ Wake Lock 요청 성공');
+      }
+    } catch (err) {
+      console.warn('❌ Wake Lock 요청 실패:', err);
+    }
+  };
+
+  if (isRunning) {
+    requestWakeLock(); // 실행 중일 때 항상 요청
+  }
+
+  return () => {
+    if (wakeLockRef.current) {
+      wakeLockRef.current.release().then(() => {
+        console.log('🧹 Wake Lock 해제됨');
+      });
+    }
+  };
+}, [isRunning]);
+
+React.useEffect(() => {
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === 'visible' && isRunning) {
+      if ('wakeLock' in navigator && navigator.wakeLock.request) {
+        navigator.wakeLock.request('screen')
+          .then((lock) => {
+            wakeLockRef.current = lock;
+            console.log('🔁 visibilitychange: Wake Lock 재요청');
+          })
+          .catch((err) => {
+            console.warn('❌ Wake Lock 재요청 실패:', err);
+          });
+      }
+    }
+  };
+
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+
+  return () => {
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+  };
+}, [isRunning]);
+
+
+return (
                 <div className="app-container">
                     <button 
                         className="menu-button"
