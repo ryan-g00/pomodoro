@@ -554,8 +554,7 @@
             const [allSetsCompleted, setAllSetsCompleted] = React.useState(false); // 모든 세트 완료 여부
             const [audioInitialized, setAudioInitialized] = React.useState(false);
             const wakeLockRef = React.useRef(null);
-            //드디어 깃허브가 맛ㅣㅏㅆ다
-
+            const [wakeLockIntervalId, setWakeLockIntervalId] = React.useState(null);
 
             const requestWakeLock = async () => {
                 try {
@@ -659,6 +658,31 @@
                 
                 return () => clearInterval(intervalId);
             }, [focusTime, breakTime, mode, isRunning]);
+
+            // 🔁 30초마다 Wake Lock 강제 재요청
+            React.useEffect(() => {
+                let intervalId;
+
+                if (isRunning) {
+                    intervalId = setInterval(() => {
+                        if ('wakeLock' in navigator && navigator.wakeLock.request) {
+                            navigator.wakeLock.request('screen')
+                                .then((lock) => {
+                                    wakeLockRef.current = lock;
+                                    console.log('🔁 [30초 재요청] Wake Lock 재요청 성공');
+                                })
+                                .catch((err) => {
+                                    console.warn('❌ [30초 재요청] Wake Lock 실패:', err);
+                                });
+                        }
+                    }, 30000); // 30초마다
+                }
+
+                return () => {
+                    if (intervalId) clearInterval(intervalId);
+                };
+            }, [isRunning]);
+
 
             // 시간 포맷팅 함수
             const formatTime = (seconds) => {
