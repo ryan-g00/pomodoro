@@ -1050,7 +1050,6 @@
 
                 return () => {
                     document.removeEventListener('visibilitychange', handleVisibilityChange);
-                    releaseWakeLock();
                 };
                 }, [isRunning]);
 
@@ -1169,8 +1168,6 @@
             const pauseTimer = async () => {
                 setIsRunning(false);
                 setIsPaused(true);
-
-                await releaseWakeLock();
             };
             
             // 타이머 리셋
